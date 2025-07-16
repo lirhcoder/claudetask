@@ -10,7 +10,7 @@ class Config:
     ALLOWED_EXTENSIONS = {'.py', '.js', '.ts', '.jsx', '.tsx', '.json', '.txt', '.md', '.html', '.css'}
     
     # Socket.IO settings
-    SOCKETIO_ASYNC_MODE = 'eventlet'
+    SOCKETIO_ASYNC_MODE = 'threading'
     
     # Security settings
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
