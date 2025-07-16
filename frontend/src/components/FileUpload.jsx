@@ -11,11 +11,19 @@ const FileUpload = ({ projectName, onUploadSuccess, mode = 'button' }) => {
   const customRequest = async ({ file, onProgress, onSuccess, onError }) => {
     setUploading(true);
     
+    // 确保有项目名称
+    if (!projectName) {
+      message.error('项目名称未提供');
+      setUploading(false);
+      onError(new Error('项目名称未提供'));
+      return;
+    }
+    
     try {
       // 创建 FormData
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('project_name', projectName);
+      formData.append('project', projectName);
       
       // 调用上传 API
       const response = await uploadFile(formData, {
