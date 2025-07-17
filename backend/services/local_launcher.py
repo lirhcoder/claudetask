@@ -61,6 +61,10 @@ class LocalLauncher:
         # 转换项目路径为 Windows 格式
         windows_project_path = self._convert_wsl_to_windows_path(project_path)
         
+        # 检查是否存在 claude_wrapper.bat
+        wrapper_path = Path(__file__).parent.parent / 'claude_wrapper.bat'
+        claude_cmd = f'"{self._convert_wsl_to_windows_path(str(wrapper_path))}"' if wrapper_path.exists() else 'claude'
+        
         return f"""@echo off
 chcp 65001 > nul
 echo ========================================
@@ -76,7 +80,9 @@ echo.
 
 echo Executing Claude Code...
 echo ----------------------------------------
-claude "{prompt_escaped}"
+echo 提示: 使用 Ctrl+C 退出 Claude，不要使用 Ctrl+Z
+echo ----------------------------------------
+{claude_cmd} "{prompt_escaped}"
 
 echo.
 echo ----------------------------------------
