@@ -461,8 +461,8 @@ def create_task_chain():
         project_path = project_path.replace('\\', '/')
     
     # Validate project path
-    is_valid, error_msg = validate_project_path(project_path)
-    if not is_valid:
+    error_msg = validate_project_path(project_path)
+    if error_msg:
         return jsonify({'error': error_msg}), 400
     
     try:
@@ -476,8 +476,8 @@ def create_task_chain():
         
         # Validate prompts
         for prompt in [parent_prompt] + child_prompts:
-            is_valid, error_msg = validate_prompt(prompt)
-            if not is_valid:
+            error_msg = validate_prompt(prompt)
+            if error_msg:
                 return jsonify({'error': f'Invalid prompt: {error_msg}'}), 400
         
         # Create task chain
@@ -643,13 +643,13 @@ def execute_local():
         project_path = project_path.replace('\\', '/')
     
     # Validate project path
-    is_valid, error_msg = validate_project_path(project_path)
-    if not is_valid:
+    error_msg = validate_project_path(project_path)
+    if error_msg:
         return jsonify({'error': error_msg}), 400
     
     # Validate prompt
-    is_valid, error_msg = validate_prompt(prompt)
-    if not is_valid:
+    error_msg = validate_prompt(prompt)
+    if error_msg:
         return jsonify({'error': error_msg}), 400
     
     try:
