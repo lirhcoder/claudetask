@@ -25,6 +25,18 @@ def validate_project_path(project_path):
     if not isinstance(project_path, str):
         return "Project path must be a string"
     
+    # Handle Windows paths in WSL (e.g., C:\path\to\project)
+    if '\\' in project_path:
+        # Convert Windows path to WSL path
+        if project_path[1:3] == ':\\':
+            # C:\path\to\project -> /mnt/c/path/to/project
+            drive_letter = project_path[0].lower()
+            path_part = project_path[3:].replace('\\', '/')
+            project_path = f'/mnt/{drive_letter}/{path_part}'
+        else:
+            # Just replace backslashes
+            project_path = project_path.replace('\\', '/')
+    
     # Convert to Path object
     try:
         path = Path(project_path)

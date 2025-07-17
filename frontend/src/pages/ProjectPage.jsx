@@ -70,7 +70,10 @@ const ProjectPage = () => {
 
     try {
       setExecuting(true)
+      // 使用项目路径，如果是相对路径需要转换
       const projectPath = project.path
+      console.log('Project data:', project)
+      console.log('Using project path:', projectPath)
       
       if (socket) {
         // Use WebSocket for real-time updates

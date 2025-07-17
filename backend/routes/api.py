@@ -13,10 +13,57 @@ def health_check():
     """Health check endpoint."""
     return jsonify({'status': 'healthy', 'message': 'Claude Code Web API is running'}), 200
 
+@api_bp.route('/debug/validate-path', methods=['POST'])
+def debug_validate_path():
+    """Debug endpoint to validate project paths."""
+    data = request.get_json()
+    project_path = data.get('project_path', '')
+    
+    # Original path
+    result = {
+        'original_path': project_path,
+        'has_backslashes': '\\' in project_path,
+        'is_windows_path': len(project_path) > 2 and project_path[1:3] == ':\\'
+    }
+    
+    # Convert if needed
+    converted_path = project_path
+    if '\\' in project_path:
+        if project_path[1:3] == ':\\':
+            drive_letter = project_path[0].lower()
+            path_part = project_path[3:].replace('\\', '/')
+            converted_path = f'/mnt/{drive_letter}/{path_part}'
+        else:
+            converted_path = project_path.replace('\\', '/')
+    
+    result['converted_path'] = converted_path
+    
+    # Validate
+    from pathlib import Path
+    try:
+        path = Path(converted_path)
+        result['path_exists'] = path.exists()
+        result['is_directory'] = path.is_dir() if path.exists() else False
+        result['is_absolute'] = path.is_absolute()
+        result['resolved_path'] = str(path.resolve()) if path.exists() else None
+    except Exception as e:
+        result['path_error'] = str(e)
+    
+    # Run validator
+    error = validate_project_path(project_path)
+    result['validation_error'] = error
+    result['is_valid'] = error is None
+    
+    return jsonify(result), 200
+
 @api_bp.route('/execute', methods=['POST'])
 def execute_claude():
     """Execute Claude Code with given prompt."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     data = request.get_json()
+    logger.info(f"Execute request received: {data}")
     
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -24,14 +71,28 @@ def execute_claude():
     prompt = data.get('prompt')
     project_path = data.get('project_path')
     
+    logger.info(f"Prompt: {prompt[:50]}..." if prompt else "No prompt")
+    logger.info(f"Project path: {project_path}")
+    
     # Validate inputs
     prompt_error = validate_prompt(prompt)
     if prompt_error:
+        logger.error(f"Prompt validation error: {prompt_error}")
         return jsonify({'error': prompt_error}), 400
         
     path_error = validate_project_path(project_path)
     if path_error:
+        logger.error(f"Path validation error: {path_error}")
         return jsonify({'error': path_error}), 400
+    
+    # Convert Windows path to WSL path if needed
+    if project_path and '\\' in project_path:
+        if project_path[1:3] == ':\\':
+            drive_letter = project_path[0].lower()
+            path_part = project_path[3:].replace('\\', '/')
+            project_path = f'/mnt/{drive_letter}/{path_part}'
+        else:
+            project_path = project_path.replace('\\', '/')
     
     # Execute task
     executor = get_executor()
