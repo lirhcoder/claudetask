@@ -73,11 +73,42 @@ class ClaudeExecutor:
         try:
             # Build command
             # Claude Code 命令格式: claude [options] "prompt"
-            # --yes: 自动确认所有提示
-            # --no-color: 禁用彩色输出（可选）
-            cmd = [self.claude_path, task.prompt]
+            # 在 Windows 环境下可能需要添加 .exe 扩展名
+            claude_executable = self.claude_path
+            
+            # 如果是简单的命令名（如 'claude'），尝试通过 which/where 查找
+            if not os.path.isabs(claude_executable) and not os.path.exists(claude_executable):
+                import shutil
+                found_path = shutil.which(claude_executable)
+                if found_path:
+                    claude_executable = found_path
+                    logger.info(f"Found claude at: {claude_executable}")
+                else:
+                    # Windows 特殊处理
+                    if os.name == 'nt':
+                        for ext in ['.exe', '.cmd', '.bat']:
+                            found_path = shutil.which(claude_executable + ext)
+                            if found_path:
+                                claude_executable = found_path
+                                logger.info(f"Found claude at: {claude_executable}")
+                                break
+            
+            # 验证可执行文件存在
+            if not os.path.exists(claude_executable) and not shutil.which(claude_executable):
+                raise FileNotFoundError(f"Claude executable not found: {claude_executable}")
+                
+            # 对于 Windows 路径，确保正确格式化
+            if os.name == 'nt' and not claude_executable.endswith(('.exe', '.cmd', '.bat')):
+                # 检查是否存在带扩展名的版本
+                for ext in ['.exe', '.cmd', '.bat']:
+                    if os.path.exists(claude_executable + ext):
+                        claude_executable = claude_executable + ext
+                        break
+                    
+            cmd = [claude_executable, task.prompt]
             logger.info(f"Executing command: {' '.join(cmd)}")
             logger.info(f"Working directory: {task.project_path}")
+            logger.info(f"Claude executable: {claude_executable}")
             
             # Create process
             process = subprocess.Popen(
@@ -128,7 +159,7 @@ class ClaudeExecutor:
         finally:
             task.completed_at = datetime.utcnow()
             self.task_manager.update_task(task)
-            if task.completion_callback:
+            if hasattr(task, 'completion_callback') and task.completion_callback:
                 task.completion_callback(task)
             
             # Cleanup

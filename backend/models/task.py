@@ -324,6 +324,7 @@ class Task:
         self.process = None
         self.exit_code = None
         self.error = None
+        self.completion_callback = None
         
     def to_dict(self):
         def format_datetime(dt):
