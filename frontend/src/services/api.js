@@ -44,6 +44,7 @@ export const projectApi = {
     apiClient.post('/projects', { name, initialize_readme: initializeReadme }),
   getProjectDetails: (projectName) => apiClient.get(`/projects/${projectName}`),
   getFileContent: (filePath) => apiClient.get(`/files/${filePath}`),
+  updateFileContent: (filePath, content) => apiClient.put(`/files/${filePath}`, { content }),
   deleteFile: (filePath) => apiClient.delete(`/files/${filePath}`),
   uploadFile: (formData) => apiClient.post('/files/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }

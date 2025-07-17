@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Row, Col, Card, Input, Button, message, Spin, Space, Modal } from 'antd'
-import { SendOutlined, UploadOutlined } from '@ant-design/icons'
+import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import FileExplorer from '../components/FileExplorer'
 import CodeEditor from '../components/CodeEditor'
 import TaskOutput from '../components/TaskOutput'
@@ -21,6 +21,9 @@ const ProjectPage = () => {
   const [currentFile, setCurrentFile] = useState(null)
   const [currentTask, setCurrentTask] = useState(null)
   const [templateModalVisible, setTemplateModalVisible] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [editedContent, setEditedContent] = useState('')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   
   const { socket, connectSocket } = useSocketStore()
 
@@ -102,18 +105,59 @@ const ProjectPage = () => {
 
   const handleFileSelect = async (file) => {
     if (file.type === 'file') {
-      try {
-        // file.path 已经包含项目名称，不需要再拼接
-        const content = await projectApi.getFileContent(file.path)
-        setCurrentFile({
-          path: file.path,
-          content: content.content,
-          language: getLanguageFromPath(file.path)
+      // 如果有未保存的更改，提示用户
+      if (hasUnsavedChanges) {
+        Modal.confirm({
+          title: '未保存的更改',
+          content: '当前文件有未保存的更改，是否放弃？',
+          okText: '放弃更改',
+          cancelText: '取消',
+          onOk: async () => {
+            await loadFile(file)
+          }
         })
-      } catch (error) {
-        message.error('Failed to load file')
+      } else {
+        await loadFile(file)
       }
     }
+  }
+  
+  const loadFile = async (file) => {
+    try {
+      const content = await projectApi.getFileContent(file.path)
+      setCurrentFile({
+        path: file.path,
+        content: content.content,
+        language: getLanguageFromPath(file.path)
+      })
+      setEditedContent(content.content)
+      setEditMode(false)
+      setHasUnsavedChanges(false)
+    } catch (error) {
+      message.error('Failed to load file')
+    }
+  }
+  
+  const handleSaveFile = async () => {
+    if (!currentFile) return
+    
+    try {
+      await projectApi.updateFileContent(currentFile.path, editedContent)
+      message.success('文件保存成功')
+      setCurrentFile({
+        ...currentFile,
+        content: editedContent
+      })
+      setHasUnsavedChanges(false)
+      setEditMode(false)
+    } catch (error) {
+      message.error('保存文件失败: ' + (error.response?.data?.error || error.message))
+    }
+  }
+  
+  const handleContentChange = (value) => {
+    setEditedContent(value)
+    setHasUnsavedChanges(true)
   }
 
   const getLanguageFromPath = (path) => {
@@ -188,17 +232,66 @@ const ProjectPage = () => {
         
         <Col span={14} style={{ height: '100%' }}>
           <Card 
-            title={currentFile ? `编辑: ${currentFile.path}` : "Code Editor"} 
+            title={currentFile ? `${editMode ? '编辑' : '查看'}: ${currentFile.path}${hasUnsavedChanges ? ' *' : ''}` : "Code Editor"} 
             size="small"
             style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
             bodyStyle={{ flex: 1, padding: 0, overflow: 'hidden' }}
+            extra={currentFile && (
+              <Space size="small">
+                {editMode ? (
+                  <>
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<SaveOutlined />}
+                      onClick={handleSaveFile}
+                      disabled={!hasUnsavedChanges}
+                    >
+                      保存
+                    </Button>
+                    <Button
+                      size="small"
+                      icon={<CloseOutlined />}
+                      onClick={() => {
+                        if (hasUnsavedChanges) {
+                          Modal.confirm({
+                            title: '放弃更改？',
+                            content: '是否放弃未保存的更改？',
+                            okText: '放弃',
+                            cancelText: '取消',
+                            onOk: () => {
+                              setEditedContent(currentFile.content)
+                              setEditMode(false)
+                              setHasUnsavedChanges(false)
+                            }
+                          })
+                        } else {
+                          setEditMode(false)
+                        }
+                      }}
+                    >
+                      取消
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => setEditMode(true)}
+                  >
+                    编辑
+                  </Button>
+                )}
+              </Space>
+            )}
           >
             {currentFile ? (
               <CodeEditor
-                value={currentFile.content}
+                value={editMode ? editedContent : currentFile.content}
+                onChange={editMode ? handleContentChange : undefined}
                 language={currentFile.language}
                 path={currentFile.path}
-                readOnly
+                readOnly={!editMode}
                 options={{
                   fontSize: 14,
                   minimap: { enabled: false },

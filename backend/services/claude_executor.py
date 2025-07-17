@@ -68,25 +68,22 @@ class ClaudeExecutor:
         
         try:
             # Build command
-            cmd = [self.claude_path, '--project-dir', task.project_path]
+            # Claude 命令格式: claude --yes "prompt"
+            cmd = [self.claude_path, '--yes', task.prompt]
             
             # Create process
             process = subprocess.Popen(
                 cmd,
-                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
-                cwd=task.project_path
+                cwd=task.project_path,
+                universal_newlines=True,
+                env={**os.environ, 'PYTHONUNBUFFERED': '1'}
             )
             
             task.process = process
-            
-            # Send prompt to stdin
-            process.stdin.write(task.prompt + '\n')
-            process.stdin.flush()
-            process.stdin.close()
             
             # Read output line by line
             output_lines = []

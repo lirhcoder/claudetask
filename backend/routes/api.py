@@ -217,9 +217,9 @@ def upload_file():
     except Exception as e:
         return jsonify({'error': f'Failed to save file: {str(e)}'}), 500
 
-@api_bp.route('/files/<path:file_path>', methods=['GET'])
+@api_bp.route('/files/<path:file_path>', methods=['GET', 'PUT'])
 def get_file_content(file_path):
-    """Get file content."""
+    """Get or update file content."""
     from config import Config
     
     full_path = Config.PROJECTS_DIR / file_path
@@ -230,25 +230,48 @@ def get_file_content(file_path):
     except ValueError:
         return jsonify({'error': 'Invalid file path'}), 403
     
-    if not full_path.exists():
-        return jsonify({'error': 'File not found'}), 404
-    
-    if not full_path.is_file():
-        return jsonify({'error': 'Not a file'}), 400
-    
-    # Return file content
-    try:
-        if request.args.get('download') == 'true':
-            return send_file(str(full_path), as_attachment=True)
-        else:
-            content = full_path.read_text()
+    if request.method == 'GET':
+        if not full_path.exists():
+            return jsonify({'error': 'File not found'}), 404
+        
+        if not full_path.is_file():
+            return jsonify({'error': 'Not a file'}), 400
+        
+        # Return file content
+        try:
+            if request.args.get('download') == 'true':
+                return send_file(str(full_path), as_attachment=True)
+            else:
+                content = full_path.read_text()
+                return jsonify({
+                    'path': file_path,
+                    'content': content,
+                    'size': full_path.stat().st_size
+                }), 200
+        except Exception as e:
+            return jsonify({'error': f'Failed to read file: {str(e)}'}), 500
+            
+    elif request.method == 'PUT':
+        # Update file content
+        try:
+            data = request.get_json()
+            if not data or 'content' not in data:
+                return jsonify({'error': 'Content is required'}), 400
+                
+            # Create parent directories if needed
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Write content
+            full_path.write_text(data['content'])
+            
             return jsonify({
+                'message': 'File saved successfully',
                 'path': file_path,
-                'content': content,
                 'size': full_path.stat().st_size
             }), 200
-    except Exception as e:
-        return jsonify({'error': f'Failed to read file: {str(e)}'}), 500
+            
+        except Exception as e:
+            return jsonify({'error': f'Failed to save file: {str(e)}'}), 500
 
 @api_bp.route('/files/<path:file_path>', methods=['DELETE'])
 def delete_file(file_path):
