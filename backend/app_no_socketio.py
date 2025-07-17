@@ -1,10 +1,10 @@
+"""
+Simple Flask app without Socket.IO for basic functionality
+"""
 import os
 from flask import Flask
 from flask_cors import CORS
-from flask_socketio import SocketIO
 from config import config
-
-socketio = SocketIO()
 
 def create_app(config_name=None):
     if config_name is None:
@@ -13,20 +13,12 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     
-    # Initialize extensions
+    # Initialize CORS only
     CORS(app, origins=app.config['CORS_ORIGINS'])
-    # 只在启用时初始化 Socket.IO
-    if app.config.get('SOCKETIO_ENABLED', True):
-        socketio.init_app(app, cors_allowed_origins=app.config['CORS_ORIGINS'], 
-                          async_mode=app.config['SOCKETIO_ASYNC_MODE'],
-                          logger=False, engineio_logger=False)  # 减少日志输出
     
     # Register blueprints
     from routes.api import api_bp
-    from routes.websocket import register_socketio_handlers
-    
     app.register_blueprint(api_bp, url_prefix='/api')
-    register_socketio_handlers(socketio)
     
     # Create upload directory
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -36,4 +28,6 @@ def create_app(config_name=None):
 app = create_app()
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    print("Running Flask without Socket.IO - Real-time features disabled")
+    print("Tasks will still execute, but without real-time output streaming")
+    app.run(debug=True, host='0.0.0.0', port=5000)

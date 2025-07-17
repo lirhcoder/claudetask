@@ -11,6 +11,7 @@ class Config:
     
     # Socket.IO settings
     SOCKETIO_ASYNC_MODE = 'threading'
+    SOCKETIO_ENABLED = os.environ.get('SOCKETIO_ENABLED', 'true').lower() == 'true'
     
     # Security settings
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')

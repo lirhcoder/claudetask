@@ -26,8 +26,14 @@ const ProjectPage = () => {
 
   useEffect(() => {
     loadProject()
-    if (!socket) {
-      connectSocket()
+    // 只在需要时连接 Socket
+    const enableSocket = import.meta.env.VITE_ENABLE_SOCKET !== 'false'
+    if (enableSocket && !socket) {
+      try {
+        connectSocket()
+      } catch (error) {
+        console.log('Socket connection failed, running in offline mode')
+      }
     }
   }, [projectName])
 

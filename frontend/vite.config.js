@@ -9,11 +9,28 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        secure: false,
       },
       '/socket.io': {
         target: 'http://localhost:5000',
         ws: true,
         changeOrigin: true,
+        secure: false,
+        // 添加错误处理
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxying:', req.method, req.url);
+          });
+          proxy.on('proxyReqWs', (proxyReq, req, socket, head) => {
+            console.log('Proxying WebSocket:', req.url);
+            socket.on('error', (err) => {
+              console.error('WebSocket error:', err);
+            });
+          });
+        }
       }
     }
   },
@@ -21,5 +38,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
+  },
+  // 抑制 util._extend 警告
+  define: {
+    'process.env': {}
   }
 })
