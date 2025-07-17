@@ -9,6 +9,7 @@ import {
   SunOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -30,6 +31,11 @@ const MainLayout = () => {
       key: '/tasks',
       icon: <HistoryOutlined />,
       label: 'Tasks',
+    },
+    {
+      key: '/settings',
+      icon: <SettingOutlined />,
+      label: 'Settings',
     },
   ]
 
