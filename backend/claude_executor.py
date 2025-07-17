@@ -112,9 +112,21 @@ try:
         # 方法1: 尝试直接使用 claude
         if not claude_cmd:
             try:
-                subprocess.run(['claude', '--version'], capture_output=True, check=False)
-                claude_cmd = ['claude', prompt]
-            except FileNotFoundError:
+                # 在 Windows 上使用 shell 来执行可能的批处理文件
+                if sys.platform == 'win32':
+                    result = subprocess.run(['claude', '--version'], 
+                                          capture_output=True, 
+                                          check=False, 
+                                          shell=True)
+                else:
+                    result = subprocess.run(['claude', '--version'], 
+                                          capture_output=True, 
+                                          check=False)
+                
+                if result.returncode == 0:
+                    claude_cmd = ['claude', prompt]
+                    print("找到 claude 命令（通过 PATH）")
+            except Exception:
                 pass
         
         # 方法2: 尝试使用 where/which 查找
@@ -162,6 +174,20 @@ try:
         
         print(f"使用命令: {' '.join(claude_cmd[:2])}...")
         
+        # 判断是否需要使用 shell
+        use_shell = False
+        if sys.platform == 'win32':
+            # Windows 下，.cmd, .bat, .ps1 文件需要使用 shell
+            cmd_path = claude_cmd[0].lower()
+            if cmd_path.endswith(('.cmd', '.bat', '.ps1')):
+                use_shell = True
+                print(f"Windows 脚本文件，使用 shell 执行")
+            elif cmd_path == 'claude':
+                # 如果是 'claude' 命令且在 Windows 上，也使用 shell
+                # 因为它可能是通过 npm 安装的批处理包装器
+                use_shell = True
+                print(f"Windows 上的 claude 命令，使用 shell 执行")
+        
         # 执行 Claude
         process = subprocess.Popen(
             claude_cmd,
@@ -171,7 +197,7 @@ try:
             encoding='utf-8',
             errors='replace',
             bufsize=1,
-            shell=(sys.platform == 'win32' and claude_cmd[0].endswith('.cmd'))
+            shell=use_shell
         )
         
         # 实时捕获输出
