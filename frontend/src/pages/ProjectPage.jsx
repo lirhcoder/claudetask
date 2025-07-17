@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Row, Col, Card, Input, Button, Spin, Space, Modal, App } from 'antd'
-import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
+import { Row, Col, Card, Input, Button, Spin, Space, Modal, App, Tooltip } from 'antd'
+import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined, FolderOutlined } from '@ant-design/icons'
 import FileExplorer from '../components/FileExplorer'
 import CodeEditor from '../components/CodeEditor'
 import TaskOutput from '../components/TaskOutput'
@@ -60,6 +60,28 @@ const ProjectPage = () => {
       message.error('Failed to load project')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePathUpdate = async () => {
+    if (!newPath || newPath === (project.absolute_path || project.path)) {
+      setEditingPath(false)
+      return
+    }
+    
+    try {
+      const result = await projectApi.updateProject(projectName, newPath)
+      message.success('项目路径更新成功')
+      setEditingPath(false)
+      
+      // 如果项目名称变了，需要跳转到新的URL
+      if (result.new_name !== projectName) {
+        window.location.href = `/project/${result.new_name}`
+      } else {
+        loadProject()
+      }
+    } catch (error) {
+      message.error('更新路径失败: ' + (error.response?.data?.error || error.message))
     }
   }
 
@@ -220,7 +242,19 @@ const ProjectPage = () => {
 
   return (
     <div style={{ height: 'calc(100vh - 160px)' }}>
-      <h1 style={{ marginBottom: 16 }}>{projectName}</h1>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ marginBottom: 8 }}>{projectName}</h1>
+        {project && (
+          <Space align="center">
+            <FolderOutlined />
+            <Tooltip title="项目绝对路径">
+              <span style={{ color: '#666', fontSize: '14px' }}>
+                {project.absolute_path || project.path}
+              </span>
+            </Tooltip>
+          </Space>
+        )}
+      </div>
       
       <Row gutter={8} style={{ height: '100%' }}>
         <Col span={5} style={{ height: '100%' }}>

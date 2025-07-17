@@ -127,6 +127,7 @@ def list_projects():
                 project_info = {
                     'name': item.name,
                     'path': str(item.relative_to(Config.PROJECTS_DIR.parent)),
+                    'absolute_path': str(item.absolute()),
                     'created_at': datetime.fromtimestamp(item.stat().st_ctime).isoformat(),
                     'modified_at': datetime.fromtimestamp(item.stat().st_mtime).isoformat()
                 }
@@ -169,14 +170,51 @@ def create_project():
     except Exception as e:
         return jsonify({'error': f'Failed to create project: {str(e)}'}), 500
 
-@api_bp.route('/projects/<project_name>', methods=['GET'])
-def get_project_details(project_name):
-    """Get project details."""
+@api_bp.route('/projects/<project_name>', methods=['GET', 'DELETE', 'PUT'])
+def project_details(project_name):
+    """Get or delete project."""
     from config import Config
     project_path = Config.PROJECTS_DIR / secure_filename(project_name)
     
     if not project_path.exists():
         return jsonify({'error': 'Project not found'}), 404
+    
+    if request.method == 'DELETE':
+        # Delete project
+        try:
+            import shutil
+            shutil.rmtree(str(project_path))
+            return jsonify({'message': 'Project deleted successfully'}), 200
+        except Exception as e:
+            return jsonify({'error': f'Failed to delete project: {str(e)}'}), 500
+    
+    elif request.method == 'PUT':
+        # Update project (rename/move)
+        data = request.get_json()
+        new_path = data.get('new_path')
+        
+        if not new_path:
+            return jsonify({'error': 'New path is required'}), 400
+        
+        try:
+            new_path = Path(new_path)
+            if not new_path.is_absolute():
+                new_path = Config.PROJECTS_DIR / new_path
+            
+            # Ensure parent directory exists
+            new_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Move project
+            import shutil
+            shutil.move(str(project_path), str(new_path))
+            
+            return jsonify({
+                'message': 'Project updated successfully',
+                'new_name': new_path.name,
+                'new_path': str(new_path)
+            }), 200
+        except Exception as e:
+            return jsonify({'error': f'Failed to update project: {str(e)}'}), 500
     
     # Get file tree
     def get_file_tree(path, max_depth=3, current_depth=0):
@@ -206,6 +244,7 @@ def get_project_details(project_name):
     project_info = {
         'name': project_name,
         'path': str(project_path.relative_to(Config.PROJECTS_DIR.parent)),
+        'absolute_path': str(project_path.absolute()),
         'files': get_file_tree(project_path)
     }
     

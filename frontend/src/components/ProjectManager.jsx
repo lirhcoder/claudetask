@@ -67,7 +67,7 @@ const ProjectManager = ({ project, onProjectUpdate, onProjectDelete }) => {
           title={project.name}
           description={
             <Space direction="vertical" size="small" style={{ width: '100%' }}>
-              <div>路径: {project.path}</div>
+              <div>路径: {project.absolute_path || project.path}</div>
               <div>创建时间: {new Date(project.created_at).toLocaleString()}</div>
               {project.last_modified && (
                 <div>最后修改: {new Date(project.last_modified).toLocaleString()}</div>

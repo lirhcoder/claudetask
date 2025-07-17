@@ -43,6 +43,8 @@ export const projectApi = {
   createProject: (name, initializeReadme = false) => 
     apiClient.post('/projects', { name, initialize_readme: initializeReadme }),
   getProjectDetails: (projectName) => apiClient.get(`/projects/${projectName}`),
+  updateProject: (projectName, newPath) => apiClient.put(`/projects/${projectName}`, { new_path: newPath }),
+  deleteProject: (projectName) => apiClient.delete(`/projects/${projectName}`),
   getFileContent: (filePath) => apiClient.get(`/files/${filePath}`),
   updateFileContent: (filePath, content) => apiClient.put(`/files/${filePath}`, { content }),
   deleteFile: (filePath) => apiClient.delete(`/files/${filePath}`),

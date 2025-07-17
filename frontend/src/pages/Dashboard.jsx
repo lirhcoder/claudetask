@@ -77,10 +77,14 @@ const Dashboard = () => {
               <ProjectManager
                 project={project}
                 onProjectUpdate={loadProjects}
-                onProjectDelete={(name) => {
-                  // 这里可以添加删除项目的API调用
-                  message.info(`删除项目功能需要后端API支持`);
-                  loadProjects();
+                onProjectDelete={async (name) => {
+                  try {
+                    await projectApi.deleteProject(name);
+                    message.success('项目删除成功');
+                    loadProjects();
+                  } catch (error) {
+                    message.error('删除项目失败');
+                  }
                 }}
               />
             </Col>
