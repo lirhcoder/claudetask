@@ -1,0 +1,7 @@
+{
+  "task_id": "4640ab1e-a2df-440c-a4d6-76a299094be0",
+  "prompt": "Please create a simple test file named 'hello.txt' with the content 'Hello from local execution!'",
+  "project_path": "/mnt/c/development/claudetask/backend/projects/test-local",
+  "created_at": "2025-07-17T23:52:52.394533",
+  "system": "Linux"
+}

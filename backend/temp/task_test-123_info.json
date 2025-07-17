@@ -1,0 +1,7 @@
+{
+  "task_id": "test-123",
+  "prompt": "测试提示词",
+  "project_path": "/tmp/test",
+  "created_at": "2025-07-17T23:49:47.638840",
+  "system": "Linux"
+}
