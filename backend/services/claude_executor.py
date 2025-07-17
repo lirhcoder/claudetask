@@ -62,14 +62,22 @@ class ClaudeExecutor:
     
     def _run_task(self, task: 'Task'):
         """Run a single task."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"Starting task {task.id}")
         task.status = 'running'
         task.started_at = datetime.utcnow()
         self.task_manager.update_task(task)
         
         try:
             # Build command
-            # Claude 命令格式: claude --yes "prompt"
-            cmd = [self.claude_path, '--yes', task.prompt]
+            # Claude Code 命令格式: claude [options] "prompt"
+            # --yes: 自动确认所有提示
+            # --no-color: 禁用彩色输出（可选）
+            cmd = [self.claude_path, task.prompt]
+            logger.info(f"Executing command: {' '.join(cmd)}")
+            logger.info(f"Working directory: {task.project_path}")
             
             # Create process
             process = subprocess.Popen(
@@ -109,6 +117,7 @@ class ClaudeExecutor:
             self.task_manager.update_task(task)
             
         except Exception as e:
+            logger.error(f"Task {task.id} failed with error: {str(e)}")
             task.status = 'failed'
             task.error = str(e)
             task.error_message = str(e)
