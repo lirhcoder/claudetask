@@ -310,7 +310,20 @@ def get_file_content(file_path):
             if request.args.get('download') == 'true':
                 return send_file(str(full_path), as_attachment=True)
             else:
-                content = full_path.read_text()
+                # Try multiple encodings
+                encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1']
+                content = None
+                
+                for encoding in encodings:
+                    try:
+                        content = full_path.read_text(encoding=encoding)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                
+                if content is None:
+                    # If all encodings fail, read as binary and try to decode
+                    content = full_path.read_bytes().decode('utf-8', errors='ignore')
                 return jsonify({
                     'path': file_path,
                     'content': content,
@@ -330,7 +343,7 @@ def get_file_content(file_path):
             full_path.parent.mkdir(parents=True, exist_ok=True)
             
             # Write content
-            full_path.write_text(data['content'])
+            full_path.write_text(data['content'], encoding='utf-8')
             
             return jsonify({
                 'message': 'File saved successfully',
