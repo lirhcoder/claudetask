@@ -12,8 +12,7 @@ const TasksPage = () => {
   const [, forceUpdate] = useState({})
   const [settings, setSettings] = useState({
     taskPageAutoRefresh: true,
-    taskPageRefreshInterval: 2,
-    durationUpdateInterval: 1
+    taskPageRefreshInterval: 5
   })
 
   // 格式化持续时间
@@ -84,11 +83,14 @@ const TasksPage = () => {
     }
   }, [])
 
+  // 初次加载任务
   useEffect(() => {
     loadTasks()
-    
+  }, [])
+
+  // 处理自动刷新
+  useEffect(() => {
     let interval = null
-    let durationInterval = null
 
     // 任务列表自动刷新
     if (settings.taskPageAutoRefresh) {
@@ -97,20 +99,23 @@ const TasksPage = () => {
       }, settings.taskPageRefreshInterval * 1000)
     }
     
-    // 持续时间显示更新
-    durationInterval = setInterval(() => {
+    // 清理定时器
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [settings.taskPageAutoRefresh, settings.taskPageRefreshInterval])
+
+  // 持续时间显示更新（固定每秒更新）
+  useEffect(() => {
+    const durationInterval = setInterval(() => {
       // 如果有正在运行的任务，强制更新组件以刷新时间显示
       if (tasks.some(task => task.status === 'running')) {
         forceUpdate({})
       }
-    }, settings.durationUpdateInterval * 1000)
+    }, 1000)
     
-    // 清理定时器
-    return () => {
-      if (interval) clearInterval(interval)
-      if (durationInterval) clearInterval(durationInterval)
-    }
-  }, [tasks, settings])
+    return () => clearInterval(durationInterval)
+  }, [tasks])
 
   const loadTasks = async () => {
     try {

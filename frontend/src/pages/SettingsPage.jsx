@@ -11,10 +11,9 @@ const SettingsPage = () => {
   // 默认设置
   const defaultSettings = {
     autoRefresh: true,
-    refreshInterval: 2,
+    refreshInterval: 5,
     taskPageAutoRefresh: true,
-    taskPageRefreshInterval: 2,
-    durationUpdateInterval: 1
+    taskPageRefreshInterval: 5
   }
 
   useEffect(() => {
@@ -81,12 +80,12 @@ const SettingsPage = () => {
             name="taskPageRefreshInterval"
             rules={[
               { required: true, message: '请输入刷新间隔' },
-              { type: 'number', min: 1, max: 60, message: '间隔必须在1-60秒之间' }
+              { type: 'number', min: 2, max: 60, message: '间隔必须在2-60秒之间' }
             ]}
             dependencies={['taskPageAutoRefresh']}
           >
             <InputNumber
-              min={1}
+              min={2}
               max={60}
               style={{ width: 200 }}
               addonAfter="秒"
@@ -97,25 +96,14 @@ const SettingsPage = () => {
           <Text type="secondary">
             控制任务页面列表的自动刷新频率。较短的间隔会更及时地显示任务状态更新，但可能增加服务器负载。
           </Text>
+          
+          <br />
+          <br />
+          
+          <Text type="secondary">
+            注：正在运行任务的持续时间会每秒自动更新，无需额外设置。
+          </Text>
 
-          <Divider />
-
-          <Form.Item
-            label="任务持续时间更新间隔（秒）"
-            name="durationUpdateInterval"
-            rules={[
-              { required: true, message: '请输入更新间隔' },
-              { type: 'number', min: 1, max: 10, message: '间隔必须在1-10秒之间' }
-            ]}
-            help="控制正在运行任务的持续时间显示更新频率"
-          >
-            <InputNumber
-              min={1}
-              max={10}
-              style={{ width: 200 }}
-              addonAfter="秒"
-            />
-          </Form.Item>
 
           <Form.Item style={{ marginTop: 32 }}>
             <Space>
