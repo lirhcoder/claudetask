@@ -15,6 +15,10 @@ const PromptOptimizer = ({ visible, onClose, onOptimize, originalPrompt }) => {
     '自动选择默认值',
     '跳过所有提示',
     '直接执行',
+    '不要等待',
+    '立即处理',
+    '无需确认',
+    '自动完成',
   ];
 
   // 常见的交互场景和解决方案
@@ -22,26 +26,50 @@ const PromptOptimizer = ({ visible, onClose, onOptimize, originalPrompt }) => {
     {
       scenario: '文件覆盖确认',
       problem: '当文件已存在时，Claude 会询问是否覆盖',
-      solution: '在提示中明确说明"如果文件已存在，直接覆盖"',
-      keywords: ['覆盖', '替换', '不询问']
+      solution: '在提示中明确说明"如果文件已存在，直接覆盖，不要询问"',
+      keywords: ['覆盖', '替换', '文件存在', '写入文件', '创建文件', '保存']
     },
     {
       scenario: '删除确认',
       problem: '删除文件或目录时需要确认',
       solution: '添加"确认删除，不需要再次询问"',
-      keywords: ['确认删除', '直接删除']
+      keywords: ['删除', '移除', 'delete', 'remove', '清理']
     },
     {
       scenario: '创建目录',
       problem: '创建嵌套目录时可能需要确认',
-      solution: '使用"递归创建所需的所有目录"',
-      keywords: ['递归创建', '自动创建父目录']
+      solution: '使用"递归创建所需的所有目录，包括父目录"',
+      keywords: ['创建目录', '创建文件夹', 'mkdir', '目录结构']
     },
     {
       scenario: '选择选项',
       problem: '当有多个选项时，Claude 会让用户选择',
-      solution: '明确指定选择哪个选项，如"使用第一个选项"或"选择默认值"',
-      keywords: ['默认选项', '第一个', '自动选择']
+      solution: '明确指定"使用最合适的选项"或"选择第一个可用的选项"',
+      keywords: ['选择', '选项', '多个', '哪个', '哪种']
+    },
+    {
+      scenario: '继续执行',
+      problem: 'Claude 可能会询问是否继续',
+      solution: '添加"遇到任何问题请继续执行，不要停止"',
+      keywords: ['继续', '执行', '运行', '处理', '操作']
+    },
+    {
+      scenario: '错误处理',
+      problem: '遇到错误时可能询问如何处理',
+      solution: '明确说明"遇到错误时记录错误并继续，不要中断"',
+      keywords: ['错误', '失败', '异常', 'error', '问题']
+    },
+    {
+      scenario: 'Git操作',
+      problem: 'Git操作可能需要确认',
+      solution: '添加"Git操作不需要确认，直接执行commit和push"',
+      keywords: ['git', '提交', 'commit', 'push', '版本控制']
+    },
+    {
+      scenario: '安装依赖',
+      problem: '安装包时可能需要确认',
+      solution: '使用"自动安装所有依赖，使用默认配置"',
+      keywords: ['安装', 'install', 'npm', 'pip', '依赖', 'package']
     }
   ];
 
@@ -55,7 +83,15 @@ const PromptOptimizer = ({ visible, onClose, onOptimize, originalPrompt }) => {
 
     if (!hasNonInteractiveKeyword) {
       // 添加通用的非交互指令
-      optimized = `${originalPrompt}\n\n重要：请不要询问任何确认，直接执行所有操作。如果文件已存在，直接覆盖。如果需要创建目录，自动创建所有必需的父目录。对于任何需要选择的情况，使用最合理的默认选项。`;
+      optimized = `${originalPrompt}
+
+【非交互模式指令】
+1. 不要询问任何确认，直接执行所有操作
+2. 文件操作：如果文件已存在，直接覆盖；如果目录不存在，递归创建
+3. 选择处理：遇到多个选项时，选择最合适或第一个可用的选项
+4. 错误处理：遇到非致命错误时，记录错误并继续执行，不要中断
+5. 默认行为：所有操作使用默认配置，不要等待用户输入
+6. 持续执行：完成一个任务后，自动继续下一个任务，直到全部完成`;
     }
 
     // 检测可能的交互场景

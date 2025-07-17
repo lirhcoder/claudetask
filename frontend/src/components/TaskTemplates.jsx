@@ -8,31 +8,31 @@ const { Option } = Select;
 const defaultTemplates = [
   {
     id: 'fix-bugs',
-    name: '修复Bug',
+    name: '修复Bug（非交互）',
     category: 'debug',
-    prompt: '请帮我查找并修复代码中的bug。运行测试并确保所有测试通过。',
-    tags: ['bug修复', '测试']
+    prompt: '请帮我查找并修复代码中的bug。运行测试并确保所有测试通过。\n\n重要：不要询问任何确认，直接执行所有修复。如果有多个修复方案，选择最合适的方案。测试失败时自动尝试修复。',
+    tags: ['bug修复', '测试', '非交互']
   },
   {
     id: 'add-feature',
-    name: '添加新功能',
+    name: '添加新功能（非交互）',
     category: 'feature',
-    prompt: '请帮我实现以下功能：[功能描述]。确保代码符合项目规范。',
-    tags: ['功能开发']
+    prompt: '请帮我实现以下功能：[功能描述]。确保代码符合项目规范。\n\n非交互指令：直接创建所需文件，如果文件已存在则覆盖。自动创建所需的目录结构。不要询问实现细节，根据最佳实践自主决定。',
+    tags: ['功能开发', '非交互']
   },
   {
     id: 'refactor',
-    name: '代码重构',
+    name: '代码重构（非交互）',
     category: 'refactor',
-    prompt: '请重构这段代码，提高可读性和性能。保持原有功能不变。',
-    tags: ['重构', '优化']
+    prompt: '请重构这段代码，提高可读性和性能。保持原有功能不变。\n\n自动执行：直接修改文件，不需要确认。如果有多种重构方案，选择最优方案。重构后自动运行测试确保功能正常。',
+    tags: ['重构', '优化', '非交互']
   },
   {
     id: 'write-tests',
-    name: '编写测试',
+    name: '编写测试（非交互）',
     category: 'test',
-    prompt: '请为这个模块编写单元测试，确保测试覆盖率达到80%以上。',
-    tags: ['测试', '质量保证']
+    prompt: '请为这个模块编写单元测试，确保测试覆盖率达到80%以上。\n\n自动化要求：直接创建测试文件，使用项目现有的测试框架。自动安装所需的测试依赖。测试失败时自动调整测试用例。',
+    tags: ['测试', '质量保证', '非交互']
   },
   {
     id: 'create-component',
@@ -61,6 +61,20 @@ const defaultTemplates = [
     category: 'security',
     prompt: '对代码进行安全审计，查找潜在的安全漏洞并修复。',
     tags: ['安全', '审计']
+  },
+  {
+    id: 'full-auto',
+    name: '完全自动化执行',
+    category: 'auto',
+    prompt: '[任务描述]\n\n【完全自动化模式】\n1. 不要询问任何确认或选择，自主做出所有决定\n2. 文件处理：需要时直接创建、修改或删除文件\n3. 错误处理：遇到错误时尝试自动修复，记录无法修复的错误\n4. 依赖管理：自动安装所需依赖，使用兼容版本\n5. 测试执行：完成后自动运行相关测试\n6. 持续工作：完成一个子任务后立即进行下一个，直到全部完成',
+    tags: ['自动化', '非交互', '持续执行']
+  },
+  {
+    id: 'git-workflow',
+    name: 'Git工作流（自动）',
+    category: 'git',
+    prompt: '执行以下Git操作：[操作描述]\n\n自动化Git流程：\n- 自动添加所有相关文件到暂存区\n- 使用描述性的提交信息自动提交\n- 如有冲突，自动选择合适的解决方案\n- 不需要任何确认，直接执行push操作',
+    tags: ['Git', '版本控制', '自动化']
   }
 ];
 
@@ -72,7 +86,9 @@ const categoryColors = {
   frontend: 'purple',
   backend: 'cyan',
   performance: 'gold',
-  security: 'magenta'
+  security: 'magenta',
+  auto: 'volcano',
+  git: 'geekblue'
 };
 
 const TaskTemplates = ({ onUseTemplate }) => {
