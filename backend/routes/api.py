@@ -3,8 +3,10 @@ from werkzeug.utils import secure_filename
 import os
 from pathlib import Path
 from services.claude_executor import get_executor
+from services.task_chain_executor import TaskChainExecutor
 from utils.validators import validate_project_path, validate_prompt
 from datetime import datetime
+from models.task import Task, TaskManager
 
 api_bp = Blueprint('api', __name__)
 
@@ -436,3 +438,138 @@ def delete_file(file_path):
         
     except Exception as e:
         return jsonify({'error': f'Failed to delete file: {str(e)}'}), 500
+
+@api_bp.route('/task-chains', methods=['POST'])
+def create_task_chain():
+    """Create and execute a task chain."""
+    data = request.get_json()
+    
+    # Validate input
+    project_path = data.get('project_path')
+    tasks = data.get('tasks', [])
+    
+    if not project_path or not tasks:
+        return jsonify({'error': 'Project path and tasks are required'}), 400
+    
+    if len(tasks) < 2:
+        return jsonify({'error': 'Task chain must have at least 2 tasks'}), 400
+    
+    # Convert Windows paths if needed
+    if '\\' in project_path:
+        project_path = project_path.replace('\\', '/')
+    
+    # Validate project path
+    is_valid, error_msg = validate_project_path(project_path)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+    
+    try:
+        executor = get_executor()
+        task_manager = TaskManager()
+        chain_executor = TaskChainExecutor(executor, task_manager)
+        
+        # Extract prompts from tasks
+        parent_prompt = tasks[0].get('prompt', '')
+        child_prompts = [task.get('prompt', '') for task in tasks[1:]]
+        
+        # Validate prompts
+        for prompt in [parent_prompt] + child_prompts:
+            is_valid, error_msg = validate_prompt(prompt)
+            if not is_valid:
+                return jsonify({'error': f'Invalid prompt: {error_msg}'}), 400
+        
+        # Create task chain
+        parent_task = chain_executor.create_task_chain(
+            parent_prompt=parent_prompt,
+            child_prompts=child_prompts,
+            project_path=project_path
+        )
+        
+        # Execute the chain
+        chain_executor.execute_chain(parent_task)
+        
+        return jsonify({
+            'message': 'Task chain created and execution started',
+            'parent_task_id': parent_task.id,
+            'total_tasks': len(tasks),
+            'task_chain': parent_task.to_dict()
+        }), 201
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Error creating task chain: {str(e)}")
+        return jsonify({'error': f'Failed to create task chain: {str(e)}'}), 500
+
+@api_bp.route('/tasks/<task_id>/children', methods=['GET'])
+def get_task_children(task_id):
+    """Get children of a task."""
+    try:
+        task_manager = TaskManager()
+        task = task_manager.get_task(task_id)
+        
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # Get children from database
+        children = []
+        if hasattr(task, 'children'):
+            for child in task.children:
+                children.append(child.to_dict())
+        
+        return jsonify({
+            'task_id': task_id,
+            'children': children,
+            'count': len(children)
+        }), 200
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Error getting task children: {str(e)}")
+        return jsonify({'error': f'Failed to get task children: {str(e)}'}), 500
+
+@api_bp.route('/tasks/<task_id>/add-child', methods=['POST'])
+def add_child_task(task_id):
+    """Add a child task to an existing task."""
+    data = request.get_json()
+    prompt = data.get('prompt', '').strip()
+    
+    if not prompt:
+        return jsonify({'error': 'Prompt is required'}), 400
+    
+    try:
+        executor = get_executor()
+        task_manager = TaskManager()
+        parent_task = task_manager.get_task(task_id)
+        
+        if not parent_task:
+            return jsonify({'error': 'Parent task not found'}), 404
+        
+        # Create child task
+        import uuid
+        child_id = str(uuid.uuid4())
+        child_task = Task(
+            id=child_id,
+            prompt=prompt,
+            project_path=parent_task.project_path,
+            parent_task_id=task_id
+        )
+        child_task.task_type = 'child'
+        child_task.sequence_order = len(parent_task.children) + 1 if hasattr(parent_task, 'children') else 1
+        
+        # Save child task
+        task_manager.add_task(child_task)
+        
+        # Update parent task
+        if not hasattr(parent_task, 'children'):
+            parent_task.children = []
+        parent_task.children.append(child_task)
+        
+        return jsonify({
+            'message': 'Child task added',
+            'child_task': child_task.to_dict()
+        }), 201
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Error adding child task: {str(e)}")
+        return jsonify({'error': f'Failed to add child task: {str(e)}'}), 500

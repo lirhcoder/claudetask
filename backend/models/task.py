@@ -37,7 +37,12 @@ class TaskDB:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     completed_at TIMESTAMP,
-                    metadata TEXT
+                    metadata TEXT,
+                    parent_task_id TEXT,
+                    context TEXT,
+                    sequence_order INTEGER DEFAULT 0,
+                    task_type TEXT DEFAULT 'single',
+                    FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
                 )
             ''')
             
@@ -309,7 +314,7 @@ class TaskManager:
 
 # 更新原有的Task类
 class Task:
-    def __init__(self, id, prompt, project_path):
+    def __init__(self, id, prompt, project_path, parent_task_id=None):
         self.id = id
         self.prompt = prompt
         self.project_path = project_path
@@ -325,6 +330,12 @@ class Task:
         self.exit_code = None
         self.error = None
         self.completion_callback = None
+        # 父子任务支持
+        self.parent_task_id = parent_task_id
+        self.context = None
+        self.sequence_order = 0
+        self.task_type = 'single'  # 'single', 'parent', 'child'
+        self.children = []  # 子任务列表
         
     def to_dict(self):
         def format_datetime(dt):
@@ -348,5 +359,11 @@ class Task:
             'files_changed': self.files_changed,
             'execution_time': self.execution_time,
             'exit_code': getattr(self, 'exit_code', None),
-            'error': getattr(self, 'error', None)
+            'error': getattr(self, 'error', None),
+            # 父子任务相关
+            'parent_task_id': self.parent_task_id,
+            'context': self.context,
+            'sequence_order': self.sequence_order,
+            'task_type': self.task_type,
+            'children': [child.to_dict() for child in self.children] if hasattr(self, 'children') else []
         }

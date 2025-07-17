@@ -8,6 +8,7 @@ import TaskOutput from '../components/TaskOutput'
 import FileUpload from '../components/FileUpload'
 import TaskTemplates from '../components/TaskTemplates'
 import PromptOptimizer from '../components/PromptOptimizer'
+import TaskChainCreator from '../components/TaskChainCreator'
 import { projectApi, taskApi } from '../services/api'
 import { useSocketStore } from '../stores/socketStore'
 
@@ -372,6 +373,18 @@ const ProjectPage = () => {
             style={{ marginBottom: 8 }}
             extra={
               <Space size="small">
+                <TaskChainCreator 
+                  projectPath={project?.absolute_path || project?.path}
+                  onChainCreated={(data) => {
+                    // 可以在这里更新任务列表或显示任务链状态
+                    setCurrentTask({ 
+                      id: data.parent_task_id, 
+                      status: 'running', 
+                      output: '任务链开始执行...\n',
+                      task_type: 'parent'
+                    })
+                  }}
+                />
                 <Button 
                   size="small"
                   onClick={() => setTemplateModalVisible(true)}

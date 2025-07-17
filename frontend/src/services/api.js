@@ -62,6 +62,10 @@ export const taskApi = {
   listTasks: () => apiClient.get('/tasks'),
   getTask: (taskId) => apiClient.get(`/tasks/${taskId}`),
   cancelTask: (taskId) => apiClient.post(`/tasks/${taskId}/cancel`),
+  // 任务链相关
+  createTaskChain: (data) => apiClient.post('/task-chains', data),
+  getTaskChildren: (taskId) => apiClient.get(`/tasks/${taskId}/children`),
+  addChildTask: (taskId, prompt) => apiClient.post(`/tasks/${taskId}/add-child`, { prompt }),
 }
 
 export default apiClient
