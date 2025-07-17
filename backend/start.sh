@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set environment variables
-export PROJECTS_DIR=/mnt/c/development
+# PROJECTS_DIR 使用相对路径，会基于启动目录
 export FLASK_ENV=development
 
 # Start the Flask application
