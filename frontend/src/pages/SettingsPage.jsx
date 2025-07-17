@@ -22,15 +22,17 @@ const SettingsPage = () => {
     if (savedSettings) {
       try {
         const settings = JSON.parse(savedSettings)
+        console.log('加载已保存的设置:', settings)
         form.setFieldsValue(settings)
       } catch (e) {
         console.error('加载设置失败:', e)
         form.setFieldsValue(defaultSettings)
       }
     } else {
+      console.log('使用默认设置:', defaultSettings)
       form.setFieldsValue(defaultSettings)
     }
-  }, [form])
+  }, [])
 
   const handleSave = async () => {
     try {

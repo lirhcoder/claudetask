@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Card, Button, Input, Space, message, Modal, List, Tag, Tooltip, Row, Col } from 'antd';
 import { PlusOutlined, DeleteOutlined, PlayCircleOutlined, LinkOutlined, OrderedListOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { taskApi } from '../services/api';
 
 const { TextArea } = Input;
 
 const TaskChainCreator = ({ projectPath, onChainCreated }) => {
   const [visible, setVisible] = useState(false);
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState([
     { prompt: '', order: 1, description: '初始任务' }
   ]);
@@ -116,6 +118,9 @@ const TaskChainCreator = ({ projectPath, onChainCreated }) => {
         console.log('Passing data to onChainCreated:', responseData);
         onChainCreated(responseData);
       }
+      
+      // 跳转到任务一览页面
+      navigate('/tasks');
     } catch (error) {
       console.error('创建任务链失败:', error);
       console.error('Error response:', error.response);

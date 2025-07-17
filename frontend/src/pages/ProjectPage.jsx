@@ -116,6 +116,8 @@ const ProjectPage = () => {
           setCurrentTask({ id: data.task_id, status: 'running', output: '' })
           message.success('Task started')
           setPrompt('')
+          // 跳转到任务一览页面
+          navigate('/tasks')
         })
         
         socket.once('execution_error', (data) => {
@@ -128,6 +130,8 @@ const ProjectPage = () => {
         setCurrentTask({ id: response.task_id, status: 'queued', output: '' })
         message.success('Task queued')
         setPrompt('')
+        // 跳转到任务一览页面
+        navigate('/tasks')
       }
     } catch (error) {
       console.error('Execute error:', error)

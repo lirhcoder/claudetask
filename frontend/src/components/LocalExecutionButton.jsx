@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Button, Tooltip, Modal, Space, Alert, message } from 'antd';
 import { DesktopOutlined, WindowsOutlined, AppleOutlined, CodeOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { taskApi } from '../services/api';
 
 const LocalExecutionButton = ({ taskId, prompt, projectPath, size = 'small' }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const navigate = useNavigate();
 
   const handleLaunchLocal = async () => {
     setLaunching(true);
@@ -20,6 +22,8 @@ const LocalExecutionButton = ({ taskId, prompt, projectPath, size = 'small' }) =
       
       message.success('已在本地终端启动任务');
       setModalVisible(false);
+      // 跳转到任务一览页面
+      navigate('/tasks');
     } catch (error) {
       console.error('启动本地执行失败:', error);
       message.error(error.response?.data?.error || '启动失败');
