@@ -55,7 +55,12 @@ const SettingsPage = () => {
   }
 
   const handleReset = () => {
+    // 清除 localStorage 中的设置
+    localStorage.removeItem('claudetask_settings')
+    // 重置表单为默认值
     form.setFieldsValue(defaultSettings)
+    // 触发设置更新事件
+    window.dispatchEvent(new CustomEvent('settings-updated', { detail: defaultSettings }))
     message.info('已重置为默认设置')
   }
 
