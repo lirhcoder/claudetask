@@ -56,10 +56,14 @@ class LocalLauncher:
     
     def _generate_windows_script(self, task_id: str, prompt: str, project_path: str) -> str:
         """生成 Windows 批处理脚本"""
-        # 转义特殊字符
-        prompt_escaped = prompt.replace('"', '""')
         # 转换项目路径为 Windows 格式
         windows_project_path = self._convert_wsl_to_windows_path(project_path)
+        
+        # 创建提示词文件，避免命令行参数问题
+        prompt_file = self.temp_dir / f'task_{task_id}_prompt.txt'
+        with open(prompt_file, 'w', encoding='utf-8') as f:
+            f.write(prompt)
+        prompt_file_windows = self._convert_wsl_to_windows_path(str(prompt_file))
         
         # 检查是否使用 Python 执行器
         executor_path = Path(__file__).parent.parent / 'claude_executor.py'
@@ -87,7 +91,7 @@ echo 提示: 使用 Ctrl+C 中断任务
 echo 结果将自动同步到 Web 界面
 echo ----------------------------------------
 
-python "{executor_windows_path}" "{task_id}" "{prompt_escaped}" "{windows_project_path}" "{base_url}"
+python "{executor_windows_path}" --task-id "{task_id}" --prompt-file "{prompt_file_windows}" --project-path "{windows_project_path}" --base-url "{base_url}"
 
 echo.
 echo ----------------------------------------
@@ -96,10 +100,44 @@ pause > nul
 """
         else:
             # 回退到直接执行（无结果同步）
+            # 对于长提示词，也使用文件传递
             wrapper_path = Path(__file__).parent.parent / 'claude_wrapper.bat'
             claude_cmd = f'"{self._convert_wsl_to_windows_path(str(wrapper_path))}"' if wrapper_path.exists() else 'claude'
             
-            return f"""@echo off
+            # 转义特殊字符，但如果提示词太长或包含特殊字符，使用文件
+            if len(prompt) > 200 or '\n' in prompt or '"' in prompt:
+                # 使用文件传递提示词
+                return f"""@echo off
+chcp 65001 > nul
+echo ========================================
+echo Claude Task Executor
+echo Task ID: {task_id}
+echo Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+echo ========================================
+echo.
+
+cd /d "{windows_project_path}"
+echo Working Directory: %CD%
+echo.
+
+echo Executing Claude Code...
+echo ----------------------------------------
+echo 提示: 使用 Ctrl+C 退出 Claude，不要使用 Ctrl+Z
+echo 注意: 提示词较长，请查看: {prompt_file_windows}
+echo ----------------------------------------
+
+echo 正在读取提示词文件并执行...
+type "{prompt_file_windows}" | {claude_cmd}
+
+echo.
+echo ----------------------------------------
+echo Task completed. Press any key to close...
+pause > nul
+"""
+            else:
+                # 短提示词直接传递
+                prompt_escaped = prompt.replace('"', '""')
+                return f"""@echo off
 chcp 65001 > nul
 echo ========================================
 echo Claude Task Executor
@@ -126,8 +164,10 @@ pause > nul
     
     def _generate_unix_script(self, task_id: str, prompt: str, project_path: str) -> str:
         """生成 Unix Shell 脚本"""
-        # 转义特殊字符
-        prompt_escaped = prompt.replace('"', '\\"').replace('$', '\\$')
+        # 创建提示词文件
+        prompt_file = self.temp_dir / f'task_{task_id}_prompt.txt'
+        with open(prompt_file, 'w', encoding='utf-8') as f:
+            f.write(prompt)
         
         # 检查是否使用 Python 执行器
         executor_path = Path(__file__).parent.parent / 'claude_executor.py'
@@ -153,7 +193,7 @@ echo "提示: 使用 Ctrl+C 中断任务"
 echo "结果将自动同步到 Web 界面"
 echo "----------------------------------------"
 
-python3 "{executor_path}" "{task_id}" "{prompt_escaped}" "{project_path}" "{base_url}"
+python3 "{executor_path}" --task-id "{task_id}" --prompt-file "{prompt_file}" --project-path "{project_path}" --base-url "{base_url}"
 
 echo
 echo "----------------------------------------"

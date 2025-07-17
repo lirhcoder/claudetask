@@ -8,6 +8,7 @@ import subprocess
 import time
 import signal
 import json
+import argparse
 from pathlib import Path
 from datetime import datetime
 
@@ -18,15 +19,44 @@ if sys.platform == 'win32':
         sys.stdout.reconfigure(encoding='utf-8')
         sys.stderr.reconfigure(encoding='utf-8')
 
-# 获取任务参数
-if len(sys.argv) < 4:
-    print("用法: claude_executor.py <task_id> <prompt> <project_path> [base_url]")
-    sys.exit(1)
+# 解析命令行参数
+parser = argparse.ArgumentParser(description='Claude 任务执行器')
+parser.add_argument('--task-id', required=True, help='任务ID')
+parser.add_argument('--prompt-file', help='包含提示词的文件路径')
+parser.add_argument('--prompt', help='直接提供的提示词')
+parser.add_argument('--project-path', required=True, help='项目路径')
+parser.add_argument('--base-url', default='http://localhost:5000', help='API服务器地址')
 
-task_id = sys.argv[1]
-prompt = sys.argv[2]
-project_path = sys.argv[3]
-base_url = sys.argv[4] if len(sys.argv) > 4 else "http://localhost:5000"
+# 兼容旧的位置参数格式
+if len(sys.argv) > 1 and not sys.argv[1].startswith('--'):
+    # 旧格式: claude_executor.py <task_id> <prompt> <project_path> [base_url]
+    if len(sys.argv) < 4:
+        print("用法: claude_executor.py <task_id> <prompt> <project_path> [base_url]")
+        sys.exit(1)
+    task_id = sys.argv[1]
+    prompt = sys.argv[2]
+    project_path = sys.argv[3]
+    base_url = sys.argv[4] if len(sys.argv) > 4 else "http://localhost:5000"
+else:
+    # 新格式: 使用 argparse
+    args = parser.parse_args()
+    task_id = args.task_id
+    project_path = args.project_path
+    base_url = args.base_url
+    
+    # 获取提示词
+    if args.prompt_file:
+        try:
+            with open(args.prompt_file, 'r', encoding='utf-8') as f:
+                prompt = f.read()
+        except Exception as e:
+            print(f"读取提示词文件失败: {e}")
+            sys.exit(1)
+    elif args.prompt:
+        prompt = args.prompt
+    else:
+        print("错误: 必须提供 --prompt 或 --prompt-file")
+        sys.exit(1)
 
 # 设置工作目录
 os.chdir(project_path)
