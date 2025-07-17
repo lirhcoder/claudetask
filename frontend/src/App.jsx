@@ -1,6 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { ConfigProvider, theme } from 'antd'
+import { ConfigProvider, theme, App as AntdApp } from 'antd'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard'
 import ProjectPage from './pages/ProjectPage'
@@ -19,15 +19,17 @@ function App() {
         },
       }}
     >
-      <Router>
-        <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="project/:projectName" element={<ProjectPage />} />
-            <Route path="tasks" element={<TasksPage />} />
-          </Route>
-        </Routes>
-      </Router>
+      <AntdApp>
+        <Router>
+          <Routes>
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="project/:projectName" element={<ProjectPage />} />
+              <Route path="tasks" element={<TasksPage />} />
+            </Route>
+          </Routes>
+        </Router>
+      </AntdApp>
     </ConfigProvider>
   )
 }

@@ -103,7 +103,8 @@ const ProjectPage = () => {
   const handleFileSelect = async (file) => {
     if (file.type === 'file') {
       try {
-        const content = await projectApi.getFileContent(`${projectName}/${file.path}`)
+        // file.path 已经包含项目名称，不需要再拼接
+        const content = await projectApi.getFileContent(file.path)
         setCurrentFile({
           path: file.path,
           content: content.content,

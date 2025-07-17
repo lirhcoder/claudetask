@@ -6,6 +6,12 @@ export const useSocketStore = create((set, get) => ({
   connected: false,
   
   connectSocket: () => {
+    // 检查是否禁用了 Socket.IO
+    if (import.meta.env.VITE_ENABLE_SOCKET === 'false') {
+      console.log('Socket.IO is disabled via environment variable');
+      return null;
+    }
+    
     // 如果已经连接，先断开
     const existingSocket = get().socket
     if (existingSocket) {

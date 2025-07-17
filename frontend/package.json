@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
+    "dev:no-socket": "vite --config vite.config.no-socketio.js",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
