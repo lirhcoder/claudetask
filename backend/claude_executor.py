@@ -100,15 +100,78 @@ try:
         f.write("-" * 60 + "\n\n")
         f.flush()
         
+        # 查找 claude 命令
+        claude_cmd = None
+        
+        # 方法0: 检查环境变量
+        claude_path_env = os.environ.get('CLAUDE_PATH')
+        if claude_path_env and os.path.exists(claude_path_env):
+            claude_cmd = [claude_path_env, prompt]
+            print(f"使用环境变量 CLAUDE_PATH: {claude_path_env}")
+        
+        # 方法1: 尝试直接使用 claude
+        if not claude_cmd:
+            try:
+                subprocess.run(['claude', '--version'], capture_output=True, check=False)
+                claude_cmd = ['claude', prompt]
+            except FileNotFoundError:
+                pass
+        
+        # 方法2: 尝试使用 where/which 查找
+        if not claude_cmd:
+            try:
+                if sys.platform == 'win32':
+                    result = subprocess.run(['where', 'claude'], capture_output=True, text=True, check=False)
+                else:
+                    result = subprocess.run(['which', 'claude'], capture_output=True, text=True, check=False)
+                
+                if result.returncode == 0 and result.stdout.strip():
+                    claude_path = result.stdout.strip().split('\n')[0]
+                    claude_cmd = [claude_path, prompt]
+            except:
+                pass
+        
+        # 方法3: 检查常见安装位置
+        if not claude_cmd and sys.platform == 'win32':
+            common_paths = [
+                r'C:\Program Files\Claude\claude.exe',
+                r'C:\Program Files (x86)\Claude\claude.exe',
+                os.path.expanduser(r'~\AppData\Local\Programs\claude\claude.exe'),
+                os.path.expanduser(r'~\AppData\Roaming\npm\claude.cmd'),
+                os.path.expanduser(r'~\AppData\Roaming\npm\claude.ps1'),
+            ]
+            
+            for path in common_paths:
+                if os.path.exists(path):
+                    claude_cmd = [path, prompt]
+                    break
+        
+        # 方法4: 尝试使用 npx
+        if not claude_cmd:
+            try:
+                subprocess.run(['npx', '--version'], capture_output=True, check=False)
+                claude_cmd = ['npx', '@anthropic-ai/claude-code', prompt]
+            except FileNotFoundError:
+                pass
+        
+        if not claude_cmd:
+            raise FileNotFoundError(
+                "找不到 Claude 命令。请确保已安装 Claude Code CLI。\n"
+                "安装方法: npm install -g @anthropic-ai/claude-code"
+            )
+        
+        print(f"使用命令: {' '.join(claude_cmd[:2])}...")
+        
         # 执行 Claude
         process = subprocess.Popen(
-            ['claude', prompt],
+            claude_cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             encoding='utf-8',
             errors='replace',
-            bufsize=1
+            bufsize=1,
+            shell=(sys.platform == 'win32' and claude_cmd[0].endswith('.cmd'))
         )
         
         # 实时捕获输出
