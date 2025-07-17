@@ -28,7 +28,7 @@ def validate_project_path(project_path):
     # Handle Windows paths in WSL (e.g., C:\path\to\project)
     if '\\' in project_path:
         # Convert Windows path to WSL path
-        if project_path[1:3] == ':\\':
+        if len(project_path) > 2 and project_path[1:3] == ':\\':
             # C:\path\to\project -> /mnt/c/path/to/project
             drive_letter = project_path[0].lower()
             path_part = project_path[3:].replace('\\', '/')
@@ -40,6 +40,12 @@ def validate_project_path(project_path):
     # Convert to Path object
     try:
         path = Path(project_path)
+        
+        # If path is relative, make it absolute by prepending the projects directory
+        if not path.is_absolute():
+            from config import Config
+            path = Config.PROJECTS_DIR / path
+            
     except Exception:
         return "Invalid project path"
     
@@ -50,10 +56,6 @@ def validate_project_path(project_path):
     # Check if it's a directory
     if not path.is_dir():
         return f"Project path is not a directory: {project_path}"
-    
-    # Check if path is absolute
-    if not path.is_absolute():
-        return "Project path must be absolute"
     
     # Basic security check - prevent access to system directories
     restricted_paths = ['/etc', '/usr', '/bin', '/sbin', '/boot', '/dev', '/proc', '/sys']

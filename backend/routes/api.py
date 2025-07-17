@@ -87,12 +87,19 @@ def execute_claude():
     
     # Convert Windows path to WSL path if needed
     if project_path and '\\' in project_path:
-        if project_path[1:3] == ':\\':
+        if len(project_path) > 2 and project_path[1:3] == ':\\':
             drive_letter = project_path[0].lower()
             path_part = project_path[3:].replace('\\', '/')
             project_path = f'/mnt/{drive_letter}/{path_part}'
         else:
             project_path = project_path.replace('\\', '/')
+    
+    # Convert relative path to absolute if needed
+    path = Path(project_path)
+    if not path.is_absolute():
+        from config import Config
+        path = Config.PROJECTS_DIR / path
+        project_path = str(path)
     
     # Execute task
     executor = get_executor()
@@ -119,7 +126,7 @@ def list_projects():
             if item.is_dir() and not item.name.startswith('.'):
                 project_info = {
                     'name': item.name,
-                    'path': str(item),
+                    'path': str(item.relative_to(Config.PROJECTS_DIR.parent)),
                     'created_at': datetime.fromtimestamp(item.stat().st_ctime).isoformat(),
                     'modified_at': datetime.fromtimestamp(item.stat().st_mtime).isoformat()
                 }
@@ -198,7 +205,7 @@ def get_project_details(project_name):
     
     project_info = {
         'name': project_name,
-        'path': str(project_path),
+        'path': str(project_path.relative_to(Config.PROJECTS_DIR.parent)),
         'files': get_file_tree(project_path)
     }
     
