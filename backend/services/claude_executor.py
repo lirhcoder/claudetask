@@ -105,28 +105,14 @@ class ClaudeExecutor:
                         claude_executable = claude_executable + ext
                         break
                     
-            # 构建命令，添加非交互模式参数
-            cmd = [claude_executable]
-            
-            # 添加常用的非交互参数
-            # --yes: 自动确认所有提示
-            # --no-interactive: 禁用交互模式（如果支持）
-            # 注意：这些参数可能因 Claude 版本而异
-            non_interactive_flags = ['--yes', '--no-interactive', '--non-interactive', '-y']
-            
-            # 尝试检测 Claude 支持的参数
-            for flag in non_interactive_flags:
-                # 可以在这里添加参数检测逻辑
-                if flag == '--yes' or flag == '-y':
-                    cmd.append(flag)
-                    break
-            
-            cmd.append(task.prompt)
+            # 构建命令
+            # Claude Code 不支持 --yes 等非交互参数
+            # 用户需要在提示语中明确指定非交互行为
+            cmd = [claude_executable, task.prompt]
             
             logger.info(f"Executing command: {' '.join(cmd)}")
             logger.info(f"Working directory: {task.project_path}")
             logger.info(f"Claude executable: {claude_executable}")
-            logger.info(f"Non-interactive mode: Yes")
             
             # Create process
             # 使用 UTF-8 编码处理输出，避免编码错误

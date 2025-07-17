@@ -55,7 +55,7 @@ const PromptOptimizer = ({ visible, onClose, onOptimize, originalPrompt }) => {
 
     if (!hasNonInteractiveKeyword) {
       // 添加通用的非交互指令
-      optimized = `${originalPrompt}\n\n注意：请在非交互模式下执行，不要询问任何确认，自动处理所有操作。如果遇到选择，使用默认值或最合理的选项。`;
+      optimized = `${originalPrompt}\n\n重要：请不要询问任何确认，直接执行所有操作。如果文件已存在，直接覆盖。如果需要创建目录，自动创建所有必需的父目录。对于任何需要选择的情况，使用最合理的默认选项。`;
     }
 
     // 检测可能的交互场景
@@ -110,7 +110,7 @@ const PromptOptimizer = ({ visible, onClose, onOptimize, originalPrompt }) => {
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <Alert
           message="为什么需要优化提示语？"
-          description="Claude Code 在 Web 环境下以非交互模式运行，无法响应确认提示或选择选项。优化提示语可以避免因交互需求导致的执行失败。"
+          description="Claude Code 在 Web 环境下运行时无法响应确认提示或选择选项。由于 Claude CLI 不支持 --yes 等命令行参数，必须在提示语中明确指定所有非交互行为，才能避免执行失败。"
           type="info"
           showIcon
         />
