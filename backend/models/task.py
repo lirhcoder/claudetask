@@ -247,7 +247,17 @@ class TaskManager:
                 task.error_message = task_data.get('error_message')
                 task.created_at = task_data['created_at']
                 task.completed_at = task_data.get('completed_at')
-                task.files_changed = task_data.get('files_changed', [])
+                
+                # Handle files_changed which might be JSON string
+                files_changed = task_data.get('files_changed', [])
+                if isinstance(files_changed, str):
+                    try:
+                        task.files_changed = json.loads(files_changed) if files_changed else []
+                    except:
+                        task.files_changed = []
+                else:
+                    task.files_changed = files_changed or []
+                    
                 task.execution_time = task_data.get('execution_time')
                 tasks.append(task)
         
@@ -285,10 +295,13 @@ class Task:
         self.output = ''
         self.error_message = None
         self.created_at = datetime.now()
+        self.started_at = None
         self.completed_at = None
         self.files_changed = []
         self.execution_time = None
         self.process = None
+        self.exit_code = None
+        self.error = None
         
     def to_dict(self):
         return {

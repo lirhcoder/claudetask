@@ -255,14 +255,28 @@ def project_details(project_name):
 @api_bp.route('/tasks', methods=['GET'])
 def list_tasks():
     """Get all tasks."""
-    executor = get_executor()
-    tasks = executor.get_all_tasks()
-    
-    # Convert to dict and sort by created_at
-    task_list = [task.to_dict() for task in tasks]
-    task_list.sort(key=lambda x: x['created_at'] or '', reverse=True)
-    
-    return jsonify({'tasks': task_list}), 200
+    try:
+        executor = get_executor()
+        tasks = executor.get_all_tasks()
+        
+        # Convert to dict and sort by created_at
+        task_list = []
+        for task in tasks:
+            try:
+                task_dict = task.to_dict()
+                task_list.append(task_dict)
+            except Exception as e:
+                import logging
+                logging.error(f"Error converting task to dict: {e}")
+                continue
+        
+        task_list.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+        
+        return jsonify({'tasks': task_list}), 200
+    except Exception as e:
+        import logging
+        logging.error(f"Error in list_tasks: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/tasks/<task_id>', methods=['GET'])
 def get_task(task_id):
