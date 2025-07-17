@@ -1,0 +1,116 @@
+/* 项目页面样式优化 */
+
+/* 防止横向滚动 */
+.project-page-container {
+  height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 主要内容区域 */
+.project-content-row {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 列样式调整 */
+.project-col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .project-col {
+    height: auto;
+    margin-bottom: 8px;
+  }
+  
+  .project-content-row {
+    height: auto;
+    overflow-y: auto;
+  }
+}
+
+/* 按钮组优化 */
+.project-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.project-actions .ant-btn {
+  margin: 0;
+}
+
+/* 卡片标题优化 */
+.ant-card-head-title {
+  font-size: 14px;
+}
+
+/* 工具栏按钮紧凑模式 */
+.compact-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 200px;
+}
+
+.compact-toolbar > * {
+  flex: 0 0 auto;
+}
+
+/* 代码编辑器容器 */
+.code-editor-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 任务输出区域 */
+.task-output-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 响应式断点调整 */
+@media (max-width: 1200px) {
+  .ant-card-head {
+    padding: 8px 12px;
+  }
+  
+  .ant-card-extra {
+    max-width: 50%;
+  }
+}
+
+@media (max-width: 992px) {
+  .project-page-container h1 {
+    font-size: 18px;
+  }
+  
+  .ant-space-compact {
+    gap: 2px !important;
+  }
+}
+
+/* 滚动条样式 */
+.project-page-container ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.project-page-container ::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.project-page-container ::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.project-page-container ::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}

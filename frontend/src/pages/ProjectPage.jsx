@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Row, Col, Card, Input, Button, Spin, Space, Modal, App, Tooltip } from 'antd'
-import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined, FolderOutlined, BulbOutlined } from '@ant-design/icons'
+import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined, FolderOutlined, BulbOutlined, DeleteOutlined } from '@ant-design/icons'
 import FileExplorer from '../components/FileExplorer'
 import CodeEditor from '../components/CodeEditor'
 import TaskOutput from '../components/TaskOutput'
@@ -12,11 +12,13 @@ import TaskChainCreator from '../components/TaskChainCreator'
 import LocalExecutionButton from '../components/LocalExecutionButton'
 import { projectApi, taskApi } from '../services/api'
 import { useSocketStore } from '../stores/socketStore'
+import '../styles/ProjectPage.css'
 
 const { TextArea } = Input
 
 const ProjectPage = () => {
   const { message } = App.useApp()
+  const navigate = useNavigate()
   const { projectName } = useParams()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -201,6 +203,25 @@ const ProjectPage = () => {
     setHasUnsavedChanges(true)
   }
 
+  const handleDeleteProject = async () => {
+    Modal.confirm({
+      title: '确认删除项目',
+      content: `确定要删除项目 "${projectName}" 吗？此操作不可撤销。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await projectApi.deleteProject(projectName)
+          message.success('项目删除成功')
+          navigate('/') // 返回到项目列表
+        } catch (error) {
+          message.error('删除项目失败: ' + (error.response?.data?.error || error.message))
+        }
+      }
+    })
+  }
+
   const getLanguageFromPath = (path) => {
     const ext = path.split('.').pop()
     const languageMap = {
@@ -246,25 +267,35 @@ const ProjectPage = () => {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 160px)' }}>
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ marginBottom: 8 }}>{projectName}</h1>
-        {project && (
-          <Space align="center">
-            <FolderOutlined />
-            <Tooltip title="项目绝对路径">
-              <span style={{ color: '#666', fontSize: '14px' }}>
-                {project.absolute_path || project.path}
-              </span>
-            </Tooltip>
-          </Space>
-        )}
+    <div className="project-page-container">
+      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <h1 style={{ marginBottom: 4, fontSize: '20px' }}>{projectName}</h1>
+          {project && (
+            <Space align="center" size="small">
+              <FolderOutlined style={{ fontSize: '12px' }} />
+              <Tooltip title="项目绝对路径">
+                <span style={{ color: '#666', fontSize: '12px' }}>
+                  {project.absolute_path || project.path}
+                </span>
+              </Tooltip>
+            </Space>
+          )}
+        </div>
+        <Button
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={handleDeleteProject}
+        >
+          删除项目
+        </Button>
       </div>
       
-      <Row gutter={8} style={{ height: '100%' }}>
-        <Col span={5} style={{ height: '100%' }}>
+      <Row gutter={8} className="project-content-row">
+        <Col xs={24} sm={24} md={5} lg={4} xl={4} className="project-col">
           <Card 
-            title="Files" 
+            title="文件" 
             size="small"
             style={{ height: '100%', overflow: 'auto' }}
             extra={
@@ -283,7 +314,7 @@ const ProjectPage = () => {
           </Card>
         </Col>
         
-        <Col span={14} style={{ height: '100%' }}>
+        <Col xs={24} sm={24} md={14} lg={14} xl={14} className="project-col">
           <Card 
             title={currentFile ? `${editMode ? '编辑' : '查看'}: ${currentFile.path}${hasUnsavedChanges ? ' *' : ''}` : "Code Editor"} 
             size="small"
@@ -368,17 +399,18 @@ const ProjectPage = () => {
           </Card>
         </Col>
         
-        <Col span={5} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Col xs={24} sm={24} md={5} lg={6} xl={6} className="project-col">
           <Card 
             title="Claude Code" 
             size="small"
             style={{ marginBottom: 8 }}
-            extra={
-              <Space size="small">
+            extra={null}
+          >
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
                 <TaskChainCreator 
                   projectPath={project?.absolute_path || project?.path}
                   onChainCreated={(data) => {
-                    // 可以在这里更新任务列表或显示任务链状态
                     if (data && data.parent_task_id) {
                       setCurrentTask({ 
                         id: data.parent_task_id, 
@@ -389,7 +421,6 @@ const ProjectPage = () => {
                         project_path: data.task_chain?.project_path || projectPath
                       });
                       
-                      // 刷新任务列表
                       if (tasksRef.current) {
                         tasksRef.current.refreshTasks();
                       }
@@ -404,46 +435,45 @@ const ProjectPage = () => {
                 >
                   模板
                 </Button>
-                <Button 
-                  size="small"
-                  icon={<BulbOutlined />}
-                  onClick={() => setOptimizerVisible(true)}
-                  disabled={!prompt.trim()}
-                >
-                  优化
-                </Button>
+                <Tooltip title="优化提示词">
+                  <Button 
+                    size="small"
+                    icon={<BulbOutlined />}
+                    onClick={() => setOptimizerVisible(true)}
+                    disabled={!prompt.trim()}
+                  />
+                </Tooltip>
                 <LocalExecutionButton
                   prompt={prompt}
                   projectPath={project?.absolute_path || project?.path}
                   size="small"
                 />
-                <Button 
-                  type="primary" 
-                  size="small"
-                  icon={<SendOutlined />} 
-                  onClick={handleExecute}
-                  loading={executing}
-                >
-                  执行
-                </Button>
-              </Space>
-            }
-          >
-            <TextArea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="在这里输入你的提示语..."
-              rows={6}
-              style={{ 
-                fontSize: '14px',
-                fontFamily: 'Consolas, Monaco, monospace'
-              }}
-              onPressEnter={(e) => {
-                if (e.ctrlKey || e.metaKey) {
-                  handleExecute()
-                }
-              }}
-            />
+              </div>
+              <TextArea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="在这里输入你的提示语..."
+                rows={4}
+                style={{ 
+                  fontSize: '14px',
+                  fontFamily: 'Consolas, Monaco, monospace'
+                }}
+                onPressEnter={(e) => {
+                  if (e.ctrlKey || e.metaKey) {
+                    handleExecute()
+                  }
+                }}
+              />
+              <Button 
+                type="primary" 
+                block
+                icon={<SendOutlined />} 
+                onClick={handleExecute}
+                loading={executing}
+              >
+                执行 (Ctrl+Enter)
+              </Button>
+            </Space>
           </Card>
           
           <Card 
