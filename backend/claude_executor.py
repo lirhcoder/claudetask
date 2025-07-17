@@ -174,6 +174,26 @@ try:
         
         print(f"使用命令: {' '.join(claude_cmd[:2])}...")
         
+        # 先测试命令是否可用
+        print("测试 Claude 命令...")
+        test_cmd = [claude_cmd[0], '--version'] if len(claude_cmd) > 0 else ['claude', '--version']
+        test_shell = False
+        if sys.platform == 'win32' and (test_cmd[0].lower().endswith(('.cmd', '.bat', '.ps1')) or test_cmd[0].lower() == 'claude'):
+            test_shell = True
+            
+        try:
+            test_result = subprocess.run(test_cmd, capture_output=True, text=True, shell=test_shell, timeout=10)
+            if test_result.returncode == 0:
+                print(f"Claude 版本: {test_result.stdout.strip()}")
+            else:
+                print(f"警告: Claude 命令返回错误码 {test_result.returncode}")
+                if test_result.stderr:
+                    print(f"错误信息: {test_result.stderr}")
+        except subprocess.TimeoutExpired:
+            print("警告: Claude 命令测试超时")
+        except Exception as e:
+            print(f"警告: 无法测试 Claude 命令: {e}")
+        
         # 判断是否需要使用 shell
         use_shell = False
         if sys.platform == 'win32':
@@ -189,6 +209,9 @@ try:
                 print(f"Windows 上的 claude 命令，使用 shell 执行")
         
         # 执行 Claude
+        print(f"正在启动进程，shell={use_shell}")
+        print(f"完整命令: {claude_cmd}")
+        
         process = subprocess.Popen(
             claude_cmd,
             stdout=subprocess.PIPE,
@@ -200,18 +223,59 @@ try:
             shell=use_shell
         )
         
-        # 实时捕获输出
-        for line in process.stdout:
-            if interrupted:
-                process.terminate()
-                break
-            print(line, end='')
-            f.write(line)
-            f.flush()
+        print(f"进程已启动，PID: {process.pid}")
         
-        # 等待进程结束
-        process.wait()
-        exit_code = process.returncode
+        # 实时捕获输出
+        output_lines = 0
+        last_output_time = time.time()
+        timeout_seconds = 300  # 5分钟超时
+        
+        try:
+            while True:
+                # 检查进程是否结束
+                poll_result = process.poll()
+                if poll_result is not None:
+                    print(f"\n进程已结束，退出码: {poll_result}")
+                    exit_code = poll_result
+                    break
+                
+                # 尝试读取输出（非阻塞）
+                try:
+                    line = process.stdout.readline()
+                    if line:
+                        print(line, end='')
+                        f.write(line)
+                        f.flush()
+                        output_lines += 1
+                        last_output_time = time.time()
+                    else:
+                        # 没有输出，检查超时
+                        if time.time() - last_output_time > timeout_seconds:
+                            print(f"\n警告: {timeout_seconds}秒内没有输出，终止进程")
+                            process.terminate()
+                            exit_code = -2
+                            break
+                        time.sleep(0.1)  # 短暂休眠避免CPU占用过高
+                except:
+                    pass
+                
+                # 检查是否被中断
+                if interrupted:
+                    print("\n用户中断，终止进程")
+                    process.terminate()
+                    break
+                    
+        except Exception as e:
+            print(f"\n读取输出时出错: {e}")
+            
+        print(f"\n总共捕获了 {output_lines} 行输出")
+        
+        # 确保进程结束
+        if process.poll() is None:
+            process.wait(timeout=5)  # 等待最多5秒
+            exit_code = process.returncode
+        
+        print(f"进程结束，退出码: {exit_code}")
         
         # 写入尾部信息
         f.write(f"\n\n{'-' * 60}\n")
