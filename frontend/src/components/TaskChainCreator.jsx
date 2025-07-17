@@ -96,21 +96,30 @@ const TaskChainCreator = ({ projectPath, onChainCreated }) => {
 
     setExecuting(true);
     try {
-      const response = await taskApi.createTaskChain({
+      const taskData = {
         project_path: projectPath,
         tasks: tasks.map(t => ({ prompt: t.prompt }))
-      });
+      };
+      
+      console.log('Creating task chain with data:', taskData);
+      const response = await taskApi.createTaskChain(taskData);
+      
+      console.log('Task chain response:', response);
 
       message.success('任务链创建成功，开始执行...');
       setVisible(false);
       setTasks([{ prompt: '', order: 1, description: '初始任务' }]);
       
       if (onChainCreated) {
-        onChainCreated(response.data);
+        // 检查响应数据格式
+        const responseData = response.data || response;
+        console.log('Passing data to onChainCreated:', responseData);
+        onChainCreated(responseData);
       }
     } catch (error) {
       console.error('创建任务链失败:', error);
-      message.error(error.response?.data?.error || '创建任务链失败');
+      console.error('Error response:', error.response);
+      message.error(error.response?.data?.error || error.message || '创建任务链失败');
     } finally {
       setExecuting(false);
     }

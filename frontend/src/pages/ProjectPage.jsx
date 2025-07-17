@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Row, Col, Card, Input, Button, Spin, Space, Modal, App, Tooltip } from 'antd'
 import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined, FolderOutlined, BulbOutlined } from '@ant-design/icons'
@@ -30,6 +30,7 @@ const ProjectPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [optimizerVisible, setOptimizerVisible] = useState(false)
   
+  const tasksRef = useRef(null)
   const { socket, connectSocket } = useSocketStore()
 
   useEffect(() => {
@@ -378,12 +379,23 @@ const ProjectPage = () => {
                   projectPath={project?.absolute_path || project?.path}
                   onChainCreated={(data) => {
                     // 可以在这里更新任务列表或显示任务链状态
-                    setCurrentTask({ 
-                      id: data.parent_task_id, 
-                      status: 'running', 
-                      output: '任务链开始执行...\n',
-                      task_type: 'parent'
-                    })
+                    if (data && data.parent_task_id) {
+                      setCurrentTask({ 
+                        id: data.parent_task_id, 
+                        status: 'running', 
+                        output: '任务链开始执行...\n',
+                        task_type: 'parent',
+                        prompt: data.task_chain?.prompt || '任务链',
+                        project_path: data.task_chain?.project_path || projectPath
+                      });
+                      
+                      // 刷新任务列表
+                      if (tasksRef.current) {
+                        tasksRef.current.refreshTasks();
+                      }
+                    } else {
+                      console.error('Invalid task chain data:', data);
+                    }
                   }}
                 />
                 <Button 
