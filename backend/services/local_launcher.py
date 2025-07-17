@@ -61,11 +61,45 @@ class LocalLauncher:
         # 转换项目路径为 Windows 格式
         windows_project_path = self._convert_wsl_to_windows_path(project_path)
         
-        # 检查是否存在 claude_wrapper.bat
-        wrapper_path = Path(__file__).parent.parent / 'claude_wrapper.bat'
-        claude_cmd = f'"{self._convert_wsl_to_windows_path(str(wrapper_path))}"' if wrapper_path.exists() else 'claude'
-        
-        return f"""@echo off
+        # 检查是否使用 Python 执行器
+        executor_path = Path(__file__).parent.parent / 'claude_executor.py'
+        if executor_path.exists():
+            # 使用 Python 执行器（能捕获输出并上传结果）
+            executor_windows_path = self._convert_wsl_to_windows_path(str(executor_path))
+            base_url = os.environ.get('API_BASE_URL', 'http://localhost:5000')
+            
+            return f"""@echo off
+chcp 65001 > nul
+echo ========================================
+echo Claude Task Executor (with Result Sync)
+echo Task ID: {task_id}
+echo Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+echo ========================================
+echo.
+
+cd /d "{windows_project_path}"
+echo Working Directory: %CD%
+echo.
+
+echo Executing Claude Code...
+echo ----------------------------------------
+echo 提示: 使用 Ctrl+C 中断任务
+echo 结果将自动同步到 Web 界面
+echo ----------------------------------------
+
+python "{executor_windows_path}" "{task_id}" "{prompt_escaped}" "{windows_project_path}" "{base_url}"
+
+echo.
+echo ----------------------------------------
+echo Task completed. Press any key to close...
+pause > nul
+"""
+        else:
+            # 回退到直接执行（无结果同步）
+            wrapper_path = Path(__file__).parent.parent / 'claude_wrapper.bat'
+            claude_cmd = f'"{self._convert_wsl_to_windows_path(str(wrapper_path))}"' if wrapper_path.exists() else 'claude'
+            
+            return f"""@echo off
 chcp 65001 > nul
 echo ========================================
 echo Claude Task Executor
@@ -95,7 +129,40 @@ pause > nul
         # 转义特殊字符
         prompt_escaped = prompt.replace('"', '\\"').replace('$', '\\$')
         
-        return f"""#!/bin/bash
+        # 检查是否使用 Python 执行器
+        executor_path = Path(__file__).parent.parent / 'claude_executor.py'
+        if executor_path.exists():
+            # 使用 Python 执行器（能捕获输出并上传结果）
+            base_url = os.environ.get('API_BASE_URL', 'http://localhost:5000')
+            
+            return f"""#!/bin/bash
+echo "========================================"
+echo "Claude Task Executor (with Result Sync)"
+echo "Task ID: {task_id}"
+echo "Created: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "========================================"
+echo
+
+cd "{project_path}"
+echo "Working Directory: $(pwd)"
+echo
+
+echo "Executing Claude Code..."
+echo "----------------------------------------"
+echo "提示: 使用 Ctrl+C 中断任务"
+echo "结果将自动同步到 Web 界面"
+echo "----------------------------------------"
+
+python3 "{executor_path}" "{task_id}" "{prompt_escaped}" "{project_path}" "{base_url}"
+
+echo
+echo "----------------------------------------"
+echo "Task completed. Press Enter to close..."
+read
+"""
+        else:
+            # 回退到直接执行（无结果同步）
+            return f"""#!/bin/bash
 echo "========================================"
 echo "Claude Task Executor"
 echo "Task ID: {task_id}"

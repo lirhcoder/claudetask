@@ -576,6 +576,57 @@ def add_child_task(task_id):
         logging.error(f"Error adding child task: {str(e)}")
         return jsonify({'error': f'Failed to add child task: {str(e)}'}), 500
 
+@api_bp.route('/tasks/<task_id>/local-result', methods=['POST'])
+def update_local_result(task_id):
+    """接收本地执行的结果"""
+    try:
+        data = request.get_json()
+        
+        # 获取任务
+        task_manager = TaskManager()
+        task = task_manager.get_task(task_id)
+        
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # 更新任务状态和结果
+        task.status = data.get('status', 'completed')
+        task.output = data.get('output', '')
+        task.completed_at = data.get('completed_at')
+        task.exit_code = data.get('exit_code', 0)
+        task.execution_time = data.get('duration', 0)
+        
+        # 如果任务被中断
+        if data.get('interrupted'):
+            task.error_message = "任务被用户中断"
+        elif task.exit_code != 0:
+            task.error_message = f"任务执行失败，退出代码: {task.exit_code}"
+        
+        # 保存更新
+        task_manager.update_task(task)
+        
+        # 如果有 WebSocket 连接，通知前端
+        from app import socketio
+        socketio.emit('task_update', {
+            'task_id': task_id,
+            'status': task.status,
+            'output': task.output,
+            'completed': True
+        }, room=task_id)
+        
+        return jsonify({
+            'message': 'Result updated successfully',
+            'task_id': task_id,
+            'status': task.status
+        }), 200
+        
+    except Exception as e:
+        import logging
+        import traceback
+        logging.error(f"Error updating local result: {str(e)}")
+        logging.error(traceback.format_exc())
+        return jsonify({'error': f'Failed to update result: {str(e)}'}), 500
+
 @api_bp.route('/tasks/<task_id>/launch-local', methods=['POST'])
 def launch_local_execution(task_id):
     """Launch task in local terminal for interactive execution."""
