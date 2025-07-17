@@ -39,6 +39,8 @@ backend/*.log
 .env.local
 .env.*.local
 backend/.env
+backend/.env.wsl
+backend/.env.local
 
 # Test coverage
 htmlcov/
