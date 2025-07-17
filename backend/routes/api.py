@@ -86,6 +86,7 @@ def execute_claude():
         return jsonify({'error': path_error}), 400
     
     # Convert Windows path to WSL path if needed
+    original_path = project_path
     if project_path and '\\' in project_path:
         if len(project_path) > 2 and project_path[1:3] == ':\\':
             drive_letter = project_path[0].lower()
@@ -93,6 +94,7 @@ def execute_claude():
             project_path = f'/mnt/{drive_letter}/{path_part}'
         else:
             project_path = project_path.replace('\\', '/')
+        logger.info(f"Converted Windows path from '{original_path}' to '{project_path}'")
     
     # Convert relative path to absolute if needed
     path = Path(project_path)
@@ -127,7 +129,7 @@ def list_projects():
                 project_info = {
                     'name': item.name,
                     'path': str(item.relative_to(Config.PROJECTS_DIR.parent)),
-                    'absolute_path': str(item.absolute()),
+                    'absolute_path': str(item.absolute()).replace('\\', '/'),
                     'created_at': datetime.fromtimestamp(item.stat().st_ctime).isoformat(),
                     'modified_at': datetime.fromtimestamp(item.stat().st_mtime).isoformat()
                 }
@@ -244,7 +246,7 @@ def project_details(project_name):
     project_info = {
         'name': project_name,
         'path': str(project_path.relative_to(Config.PROJECTS_DIR.parent)),
-        'absolute_path': str(project_path.absolute()),
+        'absolute_path': str(project_path.absolute()).replace('\\', '/'),
         'files': get_file_tree(project_path)
     }
     
