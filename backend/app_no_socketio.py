@@ -28,6 +28,11 @@ def create_app(config_name=None):
 app = create_app()
 
 if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    
     print("Running Flask without Socket.IO - Real-time features disabled")
     print("Tasks will still execute, but without real-time output streaming")
+    print(f"Claude path: {app.config.get('CLAUDE_CODE_PATH', 'claude')}")
+    
     app.run(debug=True, host='0.0.0.0', port=5000)

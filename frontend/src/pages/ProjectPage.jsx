@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Row, Col, Card, Input, Button, message, Spin, Space, Modal } from 'antd'
+import { Row, Col, Card, Input, Button, Spin, Space, Modal, App } from 'antd'
 import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import FileExplorer from '../components/FileExplorer'
 import CodeEditor from '../components/CodeEditor'
@@ -13,6 +13,7 @@ import { useSocketStore } from '../stores/socketStore'
 const { TextArea } = Input
 
 const ProjectPage = () => {
+  const { message } = App.useApp()
   const { projectName } = useParams()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -100,7 +101,17 @@ const ProjectPage = () => {
         setPrompt('')
       }
     } catch (error) {
-      message.error('Failed to execute task')
+      console.error('Execute error:', error)
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to execute task'
+      message.error(errorMsg)
+      
+      // 如果是路径错误，显示调试信息
+      if (errorMsg.includes('path')) {
+        console.log('Debug info:')
+        console.log('Project name:', projectName)
+        console.log('Project data:', project)
+        console.log('Project path:', project?.path)
+      }
     } finally {
       setExecuting(false)
     }
