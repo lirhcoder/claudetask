@@ -55,6 +55,25 @@ class TaskDB:
                 ON tasks(created_at DESC)
             ''')
             
+            # Add missing columns if they don't exist
+            cursor.execute("PRAGMA table_info(tasks)")
+            columns = {row[1] for row in cursor.fetchall()}
+            
+            if 'started_at' not in columns:
+                cursor.execute('ALTER TABLE tasks ADD COLUMN started_at TIMESTAMP')
+            
+            if 'execution_time' not in columns:
+                cursor.execute('ALTER TABLE tasks ADD COLUMN execution_time REAL')
+                
+            if 'exit_code' not in columns:
+                cursor.execute('ALTER TABLE tasks ADD COLUMN exit_code INTEGER')
+                
+            if 'files_changed' not in columns:
+                cursor.execute('ALTER TABLE tasks ADD COLUMN files_changed TEXT')
+                
+            if 'error' not in columns:
+                cursor.execute('ALTER TABLE tasks ADD COLUMN error TEXT')
+            
             conn.commit()
     
     def save_task(self, task: 'Task'):
@@ -246,6 +265,7 @@ class TaskManager:
                 task.output = task_data.get('output', '')
                 task.error_message = task_data.get('error_message')
                 task.created_at = task_data['created_at']
+                task.started_at = task_data.get('started_at')
                 task.completed_at = task_data.get('completed_at')
                 
                 # Handle files_changed which might be JSON string
@@ -259,6 +279,8 @@ class TaskManager:
                     task.files_changed = files_changed or []
                     
                 task.execution_time = task_data.get('execution_time')
+                task.exit_code = task_data.get('exit_code')
+                task.error = task_data.get('error')
                 tasks.append(task)
         
         return tasks
@@ -304,6 +326,14 @@ class Task:
         self.error = None
         
     def to_dict(self):
+        def format_datetime(dt):
+            """Format datetime object or string"""
+            if dt is None:
+                return None
+            if isinstance(dt, datetime):
+                return dt.isoformat()
+            return dt  # Already a string
+            
         return {
             'id': self.id,
             'prompt': self.prompt,
@@ -311,8 +341,11 @@ class Task:
             'status': self.status,
             'output': self.output,
             'error_message': self.error_message,
-            'created_at': self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'created_at': format_datetime(self.created_at),
+            'completed_at': format_datetime(self.completed_at),
+            'started_at': format_datetime(getattr(self, 'started_at', None)),
             'files_changed': self.files_changed,
-            'execution_time': self.execution_time
+            'execution_time': self.execution_time,
+            'exit_code': getattr(self, 'exit_code', None),
+            'error': getattr(self, 'error', None)
         }
