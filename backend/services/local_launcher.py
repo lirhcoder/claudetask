@@ -242,11 +242,30 @@ read
             logger.info(f"转换路径: {wsl_path} -> {windows_path}")
             return windows_path
         
-        # 如果已经是 Windows 路径，直接返回
-        if ':' in wsl_path and '\\' in wsl_path:
+        # 检查是否为 C:/ 格式（混合格式），转换为 C:\ 格式
+        if len(wsl_path) > 2 and wsl_path[1] == ':' and '/' in wsl_path:
+            windows_path = wsl_path.replace('/', '\\')
+            logger.info(f"转换混合格式路径: {wsl_path} -> {windows_path}")
+            return windows_path
+        
+        # 如果已经是标准 Windows 路径（C:\），直接返回
+        if len(wsl_path) > 2 and wsl_path[1] == ':' and '\\' in wsl_path:
+            logger.info(f"已是 Windows 路径: {wsl_path}")
             return wsl_path
+        
+        # 如果是相对路径（如 temp\task_xxx.bat），转换为绝对路径
+        if not wsl_path.startswith('/') and not (len(wsl_path) > 1 and wsl_path[1] == ':'):
+            # 获取当前工作目录并转换
+            try:
+                import os
+                cwd = os.getcwd()
+                full_path = os.path.join(cwd, wsl_path)
+                # 递归调用处理完整路径
+                return self._convert_wsl_to_windows_path(full_path)
+            except:
+                pass
             
-        # 尝试获取当前工作目录的 Windows 路径
+        # 尝试使用 wslpath 命令转换
         try:
             # 使用 wslpath 命令转换
             result = subprocess.run(['wslpath', '-w', wsl_path], 
