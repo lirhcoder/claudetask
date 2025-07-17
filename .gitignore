@@ -1,0 +1,160 @@
+# Python (Backend)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+backend/*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# Logs
+*.log
+logs/
+backend/*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Test coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Upload directory
+uploads/
+backend/uploads/
+
+# Node.js (Frontend)
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+
+# Frontend build output
+frontend/dist/
+frontend/dist-ssr/
+frontend/build/
+*.local
+
+# Frontend cache
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/.next/
+frontend/.nuxt/
+frontend/.vuepress/dist/
+frontend/.serverless/
+frontend/.fusebox/
+frontend/.dynamodb/
+frontend/.tern-port
+
+# Frontend environment
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Frontend IDE
+frontend/.vscode/
+frontend/.idea/
+
+# Testing
+frontend/coverage/
+frontend/.nyc_output/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Project specific
+projects/
+backend/projects/
+tasks.db
+backend/tasks.db
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# SSL certificates (for production)
+nginx/ssl/
+*.pem
+*.key
+*.crt
+
+# Package manager locks (optional - some teams prefer to commit these)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Misc
+.sass-cache/
+.cache/
+.parcel-cache/
+.npm/
+.yarn/
+.pnp.*
