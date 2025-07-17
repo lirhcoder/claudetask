@@ -1,6 +1,13 @@
 import os
 from pathlib import Path
 
+# Try to load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, use system environment variables
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     CLAUDE_CODE_PATH = os.environ.get('CLAUDE_CODE_PATH', 'claude')
