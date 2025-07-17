@@ -93,8 +93,8 @@ const ProjectPage = () => {
 
     try {
       setExecuting(true)
-      // 使用项目路径，如果是相对路径需要转换
-      const projectPath = project.path
+      // 使用项目的绝对路径
+      const projectPath = project.absolute_path || project.path
       console.log('Project data:', project)
       console.log('Using project path:', projectPath)
       
