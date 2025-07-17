@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from services.claude_executor import get_executor
 from services.task_chain_executor import TaskChainExecutor
+from services.local_launcher import LocalLauncher
+from services.script_generator import TaskScriptGenerator
 from utils.validators import validate_project_path, validate_prompt
 from datetime import datetime
 from models.task import Task, TaskManager
@@ -573,3 +575,109 @@ def add_child_task(task_id):
         import logging
         logging.error(f"Error adding child task: {str(e)}")
         return jsonify({'error': f'Failed to add child task: {str(e)}'}), 500
+
+@api_bp.route('/tasks/<task_id>/launch-local', methods=['POST'])
+def launch_local_execution(task_id):
+    """Launch task in local terminal for interactive execution."""
+    try:
+        task_manager = TaskManager()
+        task = task_manager.get_task(task_id)
+        
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # Create launcher and script generator
+        launcher = LocalLauncher()
+        generator = TaskScriptGenerator()
+        
+        # Create task script
+        script_path = launcher.create_task_script(
+            task_id=task.id,
+            prompt=task.prompt,
+            project_path=task.project_path
+        )
+        
+        # Create task info file
+        info_path = launcher.create_task_info(
+            task_id=task.id,
+            prompt=task.prompt,
+            project_path=task.project_path
+        )
+        
+        # Launch terminal
+        success = launcher.launch_terminal(
+            script_path=script_path,
+            title=f"Claude Task - {task_id[:8]}"
+        )
+        
+        if success:
+            return jsonify({
+                'message': 'Task launched in local terminal',
+                'task_id': task_id,
+                'script_path': str(script_path),
+                'info_path': str(info_path)
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to launch terminal'}), 500
+            
+    except Exception as e:
+        import logging
+        logging.error(f"Error launching local execution: {str(e)}")
+        return jsonify({'error': f'Failed to launch: {str(e)}'}), 500
+
+@api_bp.route('/execute-local', methods=['POST'])
+def execute_local():
+    """Create a new task and launch it in local terminal."""
+    data = request.get_json()
+    prompt = data.get('prompt', '').strip()
+    project_path = data.get('project_path')
+    
+    # Validate input
+    if not prompt or not project_path:
+        return jsonify({'error': 'Prompt and project path are required'}), 400
+    
+    # Convert Windows paths
+    if '\\' in project_path:
+        project_path = project_path.replace('\\', '/')
+    
+    # Validate project path
+    is_valid, error_msg = validate_project_path(project_path)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+    
+    # Validate prompt
+    is_valid, error_msg = validate_prompt(prompt)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+    
+    try:
+        # Create task record
+        import uuid
+        task_id = str(uuid.uuid4())
+        task = Task(
+            id=task_id,
+            prompt=prompt,
+            project_path=project_path
+        )
+        
+        task_manager = TaskManager()
+        task_manager.add_task(task)
+        
+        # Launch in local terminal
+        launcher = LocalLauncher()
+        script_path = launcher.create_task_script(task_id, prompt, project_path)
+        success = launcher.launch_terminal(script_path, f"Claude Task - {task_id[:8]}")
+        
+        if success:
+            return jsonify({
+                'message': 'Task created and launched in local terminal',
+                'task_id': task_id,
+                'task': task.to_dict()
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to launch terminal'}), 500
+            
+    except Exception as e:
+        import logging
+        logging.error(f"Error creating local task: {str(e)}")
+        return jsonify({'error': f'Failed to create task: {str(e)}'}), 500

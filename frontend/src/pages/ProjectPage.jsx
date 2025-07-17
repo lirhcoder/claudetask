@@ -9,6 +9,7 @@ import FileUpload from '../components/FileUpload'
 import TaskTemplates from '../components/TaskTemplates'
 import PromptOptimizer from '../components/PromptOptimizer'
 import TaskChainCreator from '../components/TaskChainCreator'
+import LocalExecutionButton from '../components/LocalExecutionButton'
 import { projectApi, taskApi } from '../services/api'
 import { useSocketStore } from '../stores/socketStore'
 
@@ -399,6 +400,11 @@ const ProjectPage = () => {
                 >
                   优化
                 </Button>
+                <LocalExecutionButton
+                  prompt={prompt}
+                  projectPath={project?.absolute_path || project?.path}
+                  size="small"
+                />
                 <Button 
                   type="primary" 
                   size="small"

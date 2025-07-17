@@ -66,6 +66,10 @@ export const taskApi = {
   createTaskChain: (data) => apiClient.post('/task-chains', data),
   getTaskChildren: (taskId) => apiClient.get(`/tasks/${taskId}/children`),
   addChildTask: (taskId, prompt) => apiClient.post(`/tasks/${taskId}/add-child`, { prompt }),
+  // 本地执行相关
+  launchLocalExecution: (taskId) => apiClient.post(`/tasks/${taskId}/launch-local`),
+  executeLocal: (prompt, projectPath) => 
+    apiClient.post('/execute-local', { prompt, project_path: projectPath }),
 }
 
 export default apiClient
