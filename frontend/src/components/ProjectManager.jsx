@@ -31,21 +31,22 @@ const ProjectManager = ({ project, onProjectUpdate, onProjectDelete }) => {
     <>
       <Card
         hoverable
+        size="small"
         actions={[
           <Button
             type="text"
+            size="small"
             icon={<FolderOpenOutlined />}
             onClick={handleOpenProject}
-          >
-            打开
-          </Button>,
+            title="打开项目"
+          />,
           <Button
             type="text"
+            size="small"
             icon={<FolderAddOutlined />}
             onClick={() => setUploadModalVisible(true)}
-          >
-            上传文件
-          </Button>,
+            title="上传文件"
+          />,
           <Popconfirm
             title="确定要删除这个项目吗？"
             description="此操作不可撤销"
@@ -55,24 +56,29 @@ const ProjectManager = ({ project, onProjectUpdate, onProjectDelete }) => {
           >
             <Button
               type="text"
+              size="small"
               danger
               icon={<DeleteOutlined />}
-            >
-              删除
-            </Button>
+              title="删除项目"
+            />
           </Popconfirm>
         ]}
       >
         <Card.Meta
-          title={project.name}
+          title={
+            <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {project.name}
+            </div>
+          }
           description={
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
-              <div>路径: {project.absolute_path || project.path}</div>
-              <div>创建时间: {new Date(project.created_at).toLocaleString()}</div>
-              {project.last_modified && (
-                <div>最后修改: {new Date(project.last_modified).toLocaleString()}</div>
-              )}
-            </Space>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {project.absolute_path || project.path}
+              </div>
+              <div style={{ marginTop: 4 }}>
+                {new Date(project.created_at).toLocaleDateString()}
+              </div>
+            </div>
           }
         />
       </Card>

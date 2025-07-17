@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Button, Modal, Input, Form, message, Spin, Empty } from 'antd'
+import { Card, Row, Col, Button, Modal, Input, Form, message, Spin, Empty, Popconfirm } from 'antd'
 import { PlusOutlined, FolderOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { projectApi } from '../services/api'
-import ProjectManager from '../components/ProjectManager'
+import CompactProjectCard from '../components/CompactProjectCard'
+import FileUpload from '../components/FileUpload'
+import '../styles/Dashboard.css'
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -11,6 +13,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [modalVisible, setModalVisible] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [uploadModalVisible, setUploadModalVisible] = useState(false)
+  const [selectedProject, setSelectedProject] = useState(null)
   const [form] = Form.useForm()
 
   useEffect(() => {
@@ -49,9 +53,9 @@ const Dashboard = () => {
   }
 
   return (
-    <div>
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Projects</h1>
+    <div className="dashboard-container">
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <h1 style={{ margin: 0, fontSize: '24px' }}>Projects</h1>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
           New Project
         </Button>
@@ -71,20 +75,31 @@ const Dashboard = () => {
           </Button>
         </Empty>
       ) : (
-        <Row gutter={[16, 16]}>
+        <Row gutter={[12, 12]}>
           {projects.map((project) => (
-            <Col xs={24} sm={12} md={8} lg={6} key={project.name}>
-              <ProjectManager
+            <Col xs={24} sm={12} md={8} lg={6} xl={4} key={project.name}>
+              <CompactProjectCard
                 project={project}
-                onProjectUpdate={loadProjects}
-                onProjectDelete={async (name) => {
-                  try {
-                    await projectApi.deleteProject(name);
-                    message.success('项目删除成功');
-                    loadProjects();
-                  } catch (error) {
-                    message.error('删除项目失败');
-                  }
+                onDelete={async (name) => {
+                  Modal.confirm({
+                    title: '确定要删除这个项目吗？',
+                    content: '此操作不可撤销',
+                    okText: '确定',
+                    cancelText: '取消',
+                    onOk: async () => {
+                      try {
+                        await projectApi.deleteProject(name);
+                        message.success('项目删除成功');
+                        loadProjects();
+                      } catch (error) {
+                        message.error('删除项目失败');
+                      }
+                    }
+                  });
+                }}
+                onUpload={(project) => {
+                  setSelectedProject(project);
+                  setUploadModalVisible(true);
                 }}
               />
             </Col>
@@ -119,6 +134,29 @@ const Dashboard = () => {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`上传文件到 ${selectedProject?.name}`}
+        open={uploadModalVisible}
+        onCancel={() => {
+          setUploadModalVisible(false);
+          setSelectedProject(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        {selectedProject && (
+          <FileUpload
+            projectName={selectedProject.name}
+            onUploadSuccess={() => {
+              setUploadModalVisible(false);
+              message.success('文件上传成功');
+              loadProjects();
+            }}
+            mode="dragger"
+          />
+        )}
       </Modal>
     </div>
   )
