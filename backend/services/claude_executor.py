@@ -129,15 +129,16 @@ class ClaudeExecutor:
             logger.info(f"Non-interactive mode: Yes")
             
             # Create process
+            # 使用 UTF-8 编码处理输出，避免编码错误
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True,
                 bufsize=1,
                 cwd=task.project_path,
-                universal_newlines=True,
-                env={**os.environ, 'PYTHONUNBUFFERED': '1'}
+                env={**os.environ, 'PYTHONUNBUFFERED': '1'},
+                encoding='utf-8',
+                errors='replace'  # 遇到无法解码的字符时替换为 ?
             )
             
             task.process = process
