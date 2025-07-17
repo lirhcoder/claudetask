@@ -75,6 +75,20 @@ const defaultTemplates = [
     category: 'git',
     prompt: '执行以下Git操作：[操作描述]\n\n自动化Git流程：\n- 自动添加所有相关文件到暂存区\n- 使用描述性的提交信息自动提交\n- 如有冲突，自动选择合适的解决方案\n- 不需要任何确认，直接执行push操作',
     tags: ['Git', '版本控制', '自动化']
+  },
+  {
+    id: 'create-doc',
+    name: '创建文档（明确路径）',
+    category: 'doc',
+    prompt: '创建文档：[文档描述]\n\n【文件创建规则】\n1. 文件保存位置：\n   - 如果是项目文档，保存到项目根目录或 docs/ 目录\n   - 如果是开发文档，使用 DEVELOPMENT.md 或 docs/DEVELOPMENT.md\n   - 如果是 API 文档，使用 API.md 或 docs/API.md\n   - 如果是自述文件，使用 README.md\n2. 文件操作：\n   - 直接创建文件，不要只是展示内容\n   - 如果文件已存在，直接覆盖\n   - 使用 Write 工具实际写入文件\n3. 内容要求：\n   - 使用 Markdown 格式\n   - 包含完整的文档结构\n   - 添加目录索引（如果文档较长）',
+    tags: ['文档', '创建文件', '非交互']
+  },
+  {
+    id: 'save-content',
+    name: '保存内容到文件',
+    category: 'file',
+    prompt: '将以下内容保存到文件：[内容描述]\n\n【保存规则】\n1. 文件命名：\n   - 根据内容类型自动选择合适的文件名\n   - 使用适当的文件扩展名（.md, .txt, .json, .py 等）\n2. 保存位置：\n   - 明确指定路径：[指定路径，如 /path/to/file.ext]\n   - 如果未指定，根据内容类型选择：\n     * 配置文件 → 项目根目录\n     * 源代码 → src/ 或相应语言目录\n     * 文档 → docs/ 目录\n     * 测试 → tests/ 目录\n3. 执行要求：\n   - 使用 Write 工具直接创建文件\n   - 不要询问确认，直接保存\n   - 创建必要的目录结构',
+    tags: ['文件操作', '保存', '非交互']
   }
 ];
 
@@ -88,7 +102,9 @@ const categoryColors = {
   performance: 'gold',
   security: 'magenta',
   auto: 'volcano',
-  git: 'geekblue'
+  git: 'geekblue',
+  doc: 'lime',
+  file: 'orange'
 };
 
 const TaskTemplates = ({ onUseTemplate }) => {

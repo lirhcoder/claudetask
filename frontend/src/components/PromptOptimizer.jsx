@@ -70,6 +70,18 @@ const PromptOptimizer = ({ visible, onClose, onOptimize, originalPrompt }) => {
       problem: '安装包时可能需要确认',
       solution: '使用"自动安装所有依赖，使用默认配置"',
       keywords: ['安装', 'install', 'npm', 'pip', '依赖', 'package']
+    },
+    {
+      scenario: '保存文档',
+      problem: '创建了文档但没有明确保存位置',
+      solution: '明确指定"将文档保存到 [具体路径] 文件"，如 DEVELOPMENT.md',
+      keywords: ['文档', '保存', '创建', 'document', '开发文档', 'readme']
+    },
+    {
+      scenario: '文件路径',
+      problem: '不知道该把文件保存在哪里',
+      solution: '指定具体路径，如"保存到 docs/API.md"或"保存到项目根目录的 README.md"',
+      keywords: ['保存到', '文件', '路径', '目录', 'save', 'create']
     }
   ];
 
