@@ -86,6 +86,22 @@ if hasattr(signal, 'SIGTERM'):
 start_time = time.time()
 process = None
 
+# 在执行开始时更新任务状态为 running
+try:
+    import requests
+    status_url = f"{base_url}/api/tasks/{task_id}/status"
+    status_data = {
+        'status': 'running',
+        'started_at': datetime.now().isoformat()
+    }
+    response = requests.patch(status_url, json=status_data, timeout=5)
+    if response.status_code == 200:
+        print("✅ 任务状态已更新为运行中")
+    else:
+        print(f"⚠️ 更新任务状态失败: {response.status_code}")
+except Exception as e:
+    print(f"⚠️ 无法更新任务状态: {e}")
+
 try:
     print("\n正在执行 Claude Code...")
     print("-" * 60)
@@ -330,6 +346,7 @@ try:
     # 添加当前目录到 Python 路径
     sys.path.insert(0, str(Path(__file__).parent))
     from services.result_uploader import upload_task_result
+    
     
     print("\n正在上传执行结果...")
     success = upload_task_result(

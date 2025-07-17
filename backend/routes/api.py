@@ -576,6 +576,36 @@ def add_child_task(task_id):
         logging.error(f"Error adding child task: {str(e)}")
         return jsonify({'error': f'Failed to add child task: {str(e)}'}), 500
 
+@api_bp.route('/tasks/<task_id>/status', methods=['PATCH'])
+def update_task_status(task_id):
+    """更新任务状态"""
+    try:
+        data = request.get_json()
+        
+        # 获取任务
+        task_manager = TaskManager()
+        task = task_manager.get_task(task_id)
+        
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # 更新状态
+        if 'status' in data:
+            task.status = data['status']
+        
+        if 'started_at' in data:
+            task.started_at = data['started_at']
+        
+        # 保存任务
+        task_manager.update_task(task)
+        
+        return jsonify({'message': 'Task status updated'}), 200
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Error updating task status: {str(e)}")
+        return jsonify({'error': f'Failed to update status: {str(e)}'}), 500
+
 @api_bp.route('/tasks/<task_id>/local-result', methods=['POST'])
 def update_local_result(task_id):
     """接收本地执行的结果"""

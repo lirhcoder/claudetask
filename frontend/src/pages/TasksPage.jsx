@@ -12,6 +12,14 @@ const TasksPage = () => {
 
   useEffect(() => {
     loadTasks()
+    
+    // 每2秒刷新一次任务列表
+    const interval = setInterval(() => {
+      loadTasks()
+    }, 2000)
+    
+    // 清理定时器
+    return () => clearInterval(interval)
   }, [])
 
   const loadTasks = async () => {
