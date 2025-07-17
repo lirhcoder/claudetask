@@ -249,3 +249,31 @@ def get_file_content(file_path):
             }), 200
     except Exception as e:
         return jsonify({'error': f'Failed to read file: {str(e)}'}), 500
+
+@api_bp.route('/files/<path:file_path>', methods=['DELETE'])
+def delete_file(file_path):
+    """Delete a file."""
+    from config import Config
+    
+    # Validate path
+    try:
+        full_path = Config.PROJECTS_DIR / file_path
+        full_path = full_path.resolve()
+        
+        # Security check - ensure path is within projects directory
+        if not str(full_path).startswith(str(Config.PROJECTS_DIR.resolve())):
+            return jsonify({'error': 'Invalid file path'}), 403
+            
+        if not full_path.exists():
+            return jsonify({'error': 'File not found'}), 404
+            
+        if full_path.is_dir():
+            return jsonify({'error': 'Cannot delete directories through this endpoint'}), 400
+            
+        # Delete the file
+        full_path.unlink()
+        
+        return jsonify({'message': 'File deleted successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete file: {str(e)}'}), 500

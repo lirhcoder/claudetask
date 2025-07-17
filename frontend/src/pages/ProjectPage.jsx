@@ -164,10 +164,11 @@ const ProjectPage = () => {
     <div style={{ height: 'calc(100vh - 160px)' }}>
       <h1 style={{ marginBottom: 16 }}>{projectName}</h1>
       
-      <Row gutter={16} style={{ height: '100%' }}>
-        <Col span={6} style={{ height: '100%' }}>
+      <Row gutter={8} style={{ height: '100%' }}>
+        <Col span={5} style={{ height: '100%' }}>
           <Card 
             title="Files" 
+            size="small"
             style={{ height: '100%', overflow: 'auto' }}
             extra={
               <FileUpload 
@@ -180,47 +181,68 @@ const ProjectPage = () => {
             <FileExplorer 
               files={project?.files || []} 
               onFileSelect={handleFileSelect}
+              onFileDeleted={() => loadProject()}
             />
           </Card>
         </Col>
         
-        <Col span={12} style={{ height: '100%' }}>
-          <Card title="Code Editor" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              {currentFile ? (
-                <CodeEditor
-                  value={currentFile.content}
-                  language={currentFile.language}
-                  path={currentFile.path}
-                  readOnly
-                />
-              ) : (
-                <div style={{ padding: 20, textAlign: 'center', color: '#999' }}>
-                  Select a file to view
-                </div>
-              )}
-            </div>
+        <Col span={14} style={{ height: '100%' }}>
+          <Card 
+            title={currentFile ? `编辑: ${currentFile.path}` : "Code Editor"} 
+            size="small"
+            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+            bodyStyle={{ flex: 1, padding: 0, overflow: 'hidden' }}
+          >
+            {currentFile ? (
+              <CodeEditor
+                value={currentFile.content}
+                language={currentFile.language}
+                path={currentFile.path}
+                readOnly
+                options={{
+                  fontSize: 14,
+                  minimap: { enabled: false },
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  automaticLayout: true
+                }}
+              />
+            ) : (
+              <div style={{ 
+                height: '100%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                color: '#999' 
+              }}>
+                选择一个文件查看内容
+              </div>
+            )}
           </Card>
         </Col>
         
-        <Col span={6} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Col span={5} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Card 
             title="Claude Code" 
-            style={{ marginBottom: 16 }}
+            size="small"
+            style={{ marginBottom: 8 }}
             extra={
-              <Space>
+              <Space size="small">
                 <Button 
+                  size="small"
                   onClick={() => setTemplateModalVisible(true)}
                 >
                   模板
                 </Button>
                 <Button 
                   type="primary" 
+                  size="small"
                   icon={<SendOutlined />} 
                   onClick={handleExecute}
                   loading={executing}
                 >
-                  Execute
+                  执行
                 </Button>
               </Space>
             }
@@ -228,8 +250,12 @@ const ProjectPage = () => {
             <TextArea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Enter your prompt here..."
-              rows={4}
+              placeholder="在这里输入你的提示语..."
+              rows={6}
+              style={{ 
+                fontSize: '14px',
+                fontFamily: 'Consolas, Monaco, monospace'
+              }}
               onPressEnter={(e) => {
                 if (e.ctrlKey || e.metaKey) {
                   handleExecute()
@@ -238,7 +264,11 @@ const ProjectPage = () => {
             />
           </Card>
           
-          <Card title="Output" style={{ flex: 1, overflow: 'hidden' }}>
+          <Card 
+            title="输出" 
+            size="small"
+            style={{ flex: 1, overflow: 'hidden' }}
+            bodyStyle={{ padding: 0, height: '100%' }}>
             {currentTask && (
               <TaskOutput task={currentTask} />
             )}
