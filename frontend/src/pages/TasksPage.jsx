@@ -11,7 +11,7 @@ const TasksPage = () => {
   const [modalVisible, setModalVisible] = useState(false)
   const [, forceUpdate] = useState({})
   const [settings, setSettings] = useState({
-    taskPageAutoRefresh: true,
+    taskPageAutoRefresh: false,
     taskPageRefreshInterval: 5
   })
 
@@ -74,6 +74,7 @@ const TasksPage = () => {
 
     // 监听设置更新事件
     const handleSettingsUpdate = (event) => {
+      console.log('Settings updated:', event.detail)
       setSettings(prev => ({ ...prev, ...event.detail }))
     }
 

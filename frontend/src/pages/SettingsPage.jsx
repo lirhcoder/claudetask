@@ -10,9 +10,9 @@ const SettingsPage = () => {
   
   // 默认设置
   const defaultSettings = {
-    autoRefresh: true,
+    autoRefresh: false,
     refreshInterval: 5,
-    taskPageAutoRefresh: true,
+    taskPageAutoRefresh: false,
     taskPageRefreshInterval: 5
   }
 
