@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Row, Col, Card, Input, Button, Spin, Space, Modal, App, Tooltip } from 'antd'
-import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined, FolderOutlined } from '@ant-design/icons'
+import { SendOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined, FolderOutlined, BulbOutlined } from '@ant-design/icons'
 import FileExplorer from '../components/FileExplorer'
 import CodeEditor from '../components/CodeEditor'
 import TaskOutput from '../components/TaskOutput'
 import FileUpload from '../components/FileUpload'
 import TaskTemplates from '../components/TaskTemplates'
+import PromptOptimizer from '../components/PromptOptimizer'
 import { projectApi, taskApi } from '../services/api'
 import { useSocketStore } from '../stores/socketStore'
 
@@ -25,6 +26,7 @@ const ProjectPage = () => {
   const [editMode, setEditMode] = useState(false)
   const [editedContent, setEditedContent] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [optimizerVisible, setOptimizerVisible] = useState(false)
   
   const { socket, connectSocket } = useSocketStore()
 
@@ -377,6 +379,14 @@ const ProjectPage = () => {
                   模板
                 </Button>
                 <Button 
+                  size="small"
+                  icon={<BulbOutlined />}
+                  onClick={() => setOptimizerVisible(true)}
+                  disabled={!prompt.trim()}
+                >
+                  优化
+                </Button>
+                <Button 
                   type="primary" 
                   size="small"
                   icon={<SendOutlined />} 
@@ -431,6 +441,15 @@ const ProjectPage = () => {
           }}
         />
       </Modal>
+
+      <PromptOptimizer
+        visible={optimizerVisible}
+        onClose={() => setOptimizerVisible(false)}
+        originalPrompt={prompt}
+        onOptimize={(optimizedPrompt) => {
+          setPrompt(optimizedPrompt)
+        }}
+      />
     </div>
   )
 }

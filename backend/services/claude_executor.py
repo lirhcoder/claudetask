@@ -105,10 +105,28 @@ class ClaudeExecutor:
                         claude_executable = claude_executable + ext
                         break
                     
-            cmd = [claude_executable, task.prompt]
+            # 构建命令，添加非交互模式参数
+            cmd = [claude_executable]
+            
+            # 添加常用的非交互参数
+            # --yes: 自动确认所有提示
+            # --no-interactive: 禁用交互模式（如果支持）
+            # 注意：这些参数可能因 Claude 版本而异
+            non_interactive_flags = ['--yes', '--no-interactive', '--non-interactive', '-y']
+            
+            # 尝试检测 Claude 支持的参数
+            for flag in non_interactive_flags:
+                # 可以在这里添加参数检测逻辑
+                if flag == '--yes' or flag == '-y':
+                    cmd.append(flag)
+                    break
+            
+            cmd.append(task.prompt)
+            
             logger.info(f"Executing command: {' '.join(cmd)}")
             logger.info(f"Working directory: {task.project_path}")
             logger.info(f"Claude executable: {claude_executable}")
+            logger.info(f"Non-interactive mode: Yes")
             
             # Create process
             process = subprocess.Popen(
@@ -127,18 +145,67 @@ class ClaudeExecutor:
             # Read output line by line
             output_lines = []
             output_callback = self.output_callbacks.get(task.id)
+            interaction_detected = False
+            common_prompts = [
+                'Do you want to proceed',
+                'Are you sure',
+                'Continue?',
+                'Confirm',
+                'Y/N',
+                'yes/no',
+                'Press Enter',
+                'Would you like to'
+            ]
             
             for line in process.stdout:
                 output_lines.append(line)
+                
+                # 检测可能的交互提示
+                line_lower = line.lower()
+                for prompt in common_prompts:
+                    if prompt.lower() in line_lower:
+                        interaction_detected = True
+                        logger.warning(f"Detected interactive prompt: {line.strip()}")
+                        if output_callback:
+                            output_callback(task.id, f"⚠️ 检测到交互提示: {line.strip()}")
+                            output_callback(task.id, "💡 提示: 考虑修改提示语以避免交互，例如添加 '不要询问确认' 或 '自动处理所有操作'")
+                        break
+                
                 if output_callback:
                     output_callback(task.id, line.rstrip('\n'))
             
-            # Wait for process to complete
-            process.wait()
+            # Wait for process to complete with timeout
+            try:
+                # 等待进程完成，设置超时（5分钟）
+                process.wait(timeout=300)
+            except subprocess.TimeoutExpired:
+                logger.error(f"Task {task.id} timed out after 5 minutes")
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                task.output = ''.join(output_lines) + '\n\n❌ 任务超时（5分钟）'
+                task.exit_code = -1
+                task.status = 'failed'
+                task.error_message = '任务执行超时'
+                if output_callback:
+                    output_callback(task.id, '\n❌ 任务因超时被终止')
+                return
             
             task.output = ''.join(output_lines)
             task.exit_code = process.returncode
-            task.status = 'completed' if process.returncode == 0 else 'failed'
+            
+            # 根据退出码和检测到的交互判断任务状态
+            if process.returncode == 0:
+                task.status = 'completed'
+            else:
+                task.status = 'failed'
+                if interaction_detected:
+                    task.error_message = '任务可能因需要用户交互而失败'
+                    if output_callback:
+                        output_callback(task.id, '\n⚠️ 任务失败可能是因为需要用户交互')
+                        output_callback(task.id, '💡 建议: 在提示语中明确指定不要询问确认，自动执行所有操作')
             
             # 计算执行时间
             if task.started_at:
