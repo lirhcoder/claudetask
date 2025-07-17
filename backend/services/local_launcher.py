@@ -19,13 +19,18 @@ class LocalLauncher:
         self.temp_dir = Path(temp_dir)
         self.temp_dir.mkdir(exist_ok=True)
         self.system = platform.system()
+        # 检测是否在 WSL 中运行
+        self.is_wsl = self._detect_wsl()
         
     def create_task_script(self, task_id: str, prompt: str, project_path: str) -> Path:
         """创建任务执行脚本"""
         script_content = self._generate_script_content(task_id, prompt, project_path)
         
         # 根据系统选择脚本扩展名
-        ext = '.bat' if self.system == 'Windows' else '.sh'
+        if self.is_wsl and self._should_use_windows_terminal():
+            ext = '.bat'
+        else:
+            ext = '.bat' if self.system == 'Windows' else '.sh'
         script_path = self.temp_dir / f'task_{task_id}{ext}'
         
         # 写入脚本内容
@@ -41,7 +46,10 @@ class LocalLauncher:
     
     def _generate_script_content(self, task_id: str, prompt: str, project_path: str) -> str:
         """生成脚本内容"""
-        if self.system == 'Windows':
+        # 如果在 WSL 中运行，但需要启动 Windows 终端
+        if self.is_wsl and self._should_use_windows_terminal():
+            return self._generate_windows_script(task_id, prompt, project_path)
+        elif self.system == 'Windows':
             return self._generate_windows_script(task_id, prompt, project_path)
         else:
             return self._generate_unix_script(task_id, prompt, project_path)
@@ -50,6 +58,8 @@ class LocalLauncher:
         """生成 Windows 批处理脚本"""
         # 转义特殊字符
         prompt_escaped = prompt.replace('"', '""')
+        # 转换项目路径为 Windows 格式
+        windows_project_path = self._convert_wsl_to_windows_path(project_path)
         
         return f"""@echo off
 chcp 65001 > nul
@@ -60,7 +70,7 @@ echo Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 echo ========================================
 echo.
 
-cd /d "{project_path}"
+cd /d "{windows_project_path}"
 echo Working Directory: %CD%
 echo.
 
@@ -104,7 +114,10 @@ read
     def launch_terminal(self, script_path: Path, title: str = "Claude Task") -> bool:
         """启动终端执行脚本"""
         try:
-            if self.system == "Windows":
+            # 如果在 WSL 中运行，优先尝试启动 Windows 终端
+            if self.is_wsl and self._should_use_windows_terminal():
+                return self._launch_windows_terminal(script_path, title)
+            elif self.system == "Windows":
                 return self._launch_windows_terminal(script_path, title)
             elif self.system == "Darwin":  # macOS
                 return self._launch_macos_terminal(script_path, title)
@@ -116,12 +129,28 @@ read
     
     def _launch_windows_terminal(self, script_path: Path, title: str) -> bool:
         """启动 Windows 终端"""
+        # 将 WSL 路径转换为 Windows 路径
+        windows_path = self._convert_wsl_to_windows_path(str(script_path))
+        
+        # 如果在 WSL 中，使用 cmd.exe
+        if self.is_wsl:
+            try:
+                # 在 WSL 中使用 cmd.exe 启动
+                subprocess.Popen([
+                    'cmd.exe', '/c', 'start',
+                    '', f'"{title}"', 'cmd', '/k', windows_path
+                ])
+                logger.info("从 WSL 使用 cmd.exe 启动 Windows 终端")
+                return True
+            except Exception as e:
+                logger.error(f"WSL 中启动 Windows 终端失败: {e}")
+                
         # 尝试使用 Windows Terminal
         try:
             subprocess.Popen([
                 'wt', '-w', '0', 'new-tab',
                 '--title', title,
-                'cmd', '/k', str(script_path)
+                'cmd', '/k', windows_path
             ])
             logger.info("使用 Windows Terminal 启动")
             return True
@@ -130,10 +159,17 @@ read
         
         # 回退到 CMD
         try:
-            subprocess.Popen([
-                'cmd', '/k',
-                f'title {title} && {script_path}'
-            ], creationflags=subprocess.CREATE_NEW_CONSOLE)
+            if self.is_wsl:
+                # WSL 环境不使用 creationflags
+                subprocess.Popen([
+                    'cmd.exe', '/k',
+                    f'title {title} && {windows_path}'
+                ])
+            else:
+                subprocess.Popen([
+                    'cmd', '/k',
+                    f'title {title} && {windows_path}'
+                ], creationflags=subprocess.CREATE_NEW_CONSOLE)
             logger.info("使用 CMD 启动")
             return True
         except Exception as e:
@@ -195,6 +231,54 @@ read
             json.dump(info, f, ensure_ascii=False, indent=2)
         
         return info_path
+    
+    def _convert_wsl_to_windows_path(self, wsl_path: str) -> str:
+        """将 WSL 路径转换为 Windows 路径"""
+        # 检查是否为 WSL 路径格式 /mnt/x/...
+        if wsl_path.startswith('/mnt/') and len(wsl_path) > 6:
+            drive_letter = wsl_path[5].upper()
+            path_part = wsl_path[6:].replace('/', '\\')
+            windows_path = f"{drive_letter}:{path_part}"
+            logger.info(f"转换路径: {wsl_path} -> {windows_path}")
+            return windows_path
+        
+        # 如果已经是 Windows 路径，直接返回
+        if ':' in wsl_path and '\\' in wsl_path:
+            return wsl_path
+            
+        # 尝试获取当前工作目录的 Windows 路径
+        try:
+            # 使用 wslpath 命令转换
+            result = subprocess.run(['wslpath', '-w', wsl_path], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                windows_path = result.stdout.strip()
+                logger.info(f"使用 wslpath 转换: {wsl_path} -> {windows_path}")
+                return windows_path
+        except:
+            pass
+        
+        # 默认返回原路径
+        logger.warning(f"无法转换路径，使用原路径: {wsl_path}")
+        return wsl_path
+    
+    def _detect_wsl(self) -> bool:
+        """检测是否在 WSL 环境中运行"""
+        try:
+            with open('/proc/version', 'r') as f:
+                return 'microsoft' in f.read().lower()
+        except:
+            return False
+    
+    def _should_use_windows_terminal(self) -> bool:
+        """判断是否应该使用 Windows 终端"""
+        # 检查是否有 cmd.exe 可用
+        try:
+            result = subprocess.run(['which', 'cmd.exe'], 
+                                  capture_output=True, text=True)
+            return result.returncode == 0
+        except:
+            return False
     
     def cleanup_old_scripts(self, days: int = 7):
         """清理旧的脚本文件"""
