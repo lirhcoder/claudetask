@@ -88,27 +88,60 @@ class TaskDB:
             
             # 准备元数据
             metadata = json.dumps({
-                'files_changed': task.files_changed,
-                'execution_time': task.execution_time
+                'files_changed': getattr(task, 'files_changed', []),
+                'execution_time': getattr(task, 'execution_time', None),
+                'exit_code': getattr(task, 'exit_code', None),
+                'error': getattr(task, 'error', None),
+                'started_at': getattr(task, 'started_at', None)
             })
             
-            cursor.execute('''
-                INSERT OR REPLACE INTO tasks 
-                (id, prompt, project_path, status, output, error_message, 
-                 created_at, updated_at, completed_at, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                task.id,
-                task.prompt,
-                task.project_path,
-                task.status,
-                task.output,
-                task.error_message,
-                task.created_at,
-                datetime.now(),
-                task.completed_at,
-                metadata
-            ))
+            # 检查表结构是否包含新字段
+            cursor.execute("PRAGMA table_info(tasks)")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'parent_task_id' in columns:
+                # 使用包含新字段的插入语句
+                cursor.execute('''
+                    INSERT OR REPLACE INTO tasks 
+                    (id, prompt, project_path, status, output, error_message, 
+                     created_at, updated_at, completed_at, metadata,
+                     parent_task_id, context, sequence_order, task_type)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    task.id,
+                    task.prompt,
+                    task.project_path,
+                    task.status,
+                    task.output,
+                    task.error_message,
+                    task.created_at,
+                    datetime.now(),
+                    task.completed_at,
+                    metadata,
+                    getattr(task, 'parent_task_id', None),
+                    getattr(task, 'context', None),
+                    getattr(task, 'sequence_order', 0),
+                    getattr(task, 'task_type', 'single')
+                ))
+            else:
+                # 使用旧的插入语句（向后兼容）
+                cursor.execute('''
+                    INSERT OR REPLACE INTO tasks 
+                    (id, prompt, project_path, status, output, error_message, 
+                     created_at, updated_at, completed_at, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    task.id,
+                    task.prompt,
+                    task.project_path,
+                    task.status,
+                    task.output,
+                    task.error_message,
+                    task.created_at,
+                    datetime.now(),
+                    task.completed_at,
+                    metadata
+                ))
             
             conn.commit()
     
@@ -226,19 +259,37 @@ class TaskManager:
         # 从数据库加载
         task_data = self.db.get_task(task_id)
         if task_data:
+            # 确保必需的字段存在
+            task_id = task_data.get('id')
+            prompt = task_data.get('prompt')
+            project_path = task_data.get('project_path')
+            
+            if not all([task_id, prompt, project_path]):
+                import logging
+                logging.error(f"Task {task_id} missing required fields: id={task_id}, prompt={bool(prompt)}, project_path={bool(project_path)}")
+                return None
+                
             task = Task(
-                id=task_data['id'],
-                prompt=task_data['prompt'],
-                project_path=task_data['project_path']
+                id=task_id,
+                prompt=prompt,
+                project_path=project_path
             )
             # 恢复其他属性
-            task.status = task_data['status']
+            task.status = task_data.get('status', 'pending')
             task.output = task_data.get('output', '')
             task.error_message = task_data.get('error_message')
-            task.created_at = task_data['created_at']
+            task.created_at = task_data.get('created_at')
             task.completed_at = task_data.get('completed_at')
             task.files_changed = task_data.get('files_changed', [])
             task.execution_time = task_data.get('execution_time')
+            task.exit_code = task_data.get('exit_code')
+            task.error = task_data.get('error')
+            
+            # 恢复父子任务相关属性
+            task.parent_task_id = task_data.get('parent_task_id')
+            task.context = task_data.get('context')
+            task.sequence_order = task_data.get('sequence_order', 0)
+            task.task_type = task_data.get('task_type', 'single')
             
             # 添加到缓存
             self.cache[task.id] = task

@@ -622,7 +622,9 @@ def launch_local_execution(task_id):
             
     except Exception as e:
         import logging
+        import traceback
         logging.error(f"Error launching local execution: {str(e)}")
+        logging.error(traceback.format_exc())
         return jsonify({'error': f'Failed to launch: {str(e)}'}), 500
 
 @api_bp.route('/execute-local', methods=['POST'])
@@ -660,6 +662,12 @@ def execute_local():
             project_path=project_path
         )
         
+        # Initialize additional fields
+        task.parent_task_id = None
+        task.context = None
+        task.sequence_order = 0
+        task.task_type = 'single'
+        
         task_manager = TaskManager()
         task_manager.add_task(task)
         
@@ -679,5 +687,7 @@ def execute_local():
             
     except Exception as e:
         import logging
+        import traceback
         logging.error(f"Error creating local task: {str(e)}")
+        logging.error(traceback.format_exc())
         return jsonify({'error': f'Failed to create task: {str(e)}'}), 500
