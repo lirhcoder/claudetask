@@ -361,11 +361,20 @@ class TaskManager:
             del self.cache[task_id]
         
         return deleted_count
+    
+    def list_tasks(self, project_path: Optional[str] = None,
+                   status: Optional[str] = None) -> Dict[str, List[Dict]]:
+        """获取任务列表，返回适合API响应的格式"""
+        tasks = self.get_all_tasks(project_path, status)
+        return {
+            'tasks': [task.to_dict() for task in tasks],
+            'count': len(tasks)
+        }
 
 
 # 更新原有的Task类
 class Task:
-    def __init__(self, id, prompt, project_path, parent_task_id=None):
+    def __init__(self, id, prompt, project_path, parent_task_id=None, user_id=None):
         self.id = id
         self.prompt = prompt
         self.project_path = project_path
@@ -387,6 +396,8 @@ class Task:
         self.sequence_order = 0
         self.task_type = 'single'  # 'single', 'parent', 'child'
         self.children = []  # 子任务列表
+        # 用户关联
+        self.user_id = user_id
         
     def to_dict(self):
         def format_datetime(dt):
@@ -416,5 +427,7 @@ class Task:
             'context': self.context,
             'sequence_order': self.sequence_order,
             'task_type': self.task_type,
-            'children': [child.to_dict() for child in self.children] if hasattr(self, 'children') else []
+            'children': [child.to_dict() for child in self.children] if hasattr(self, 'children') else [],
+            # 用户关联
+            'user_id': getattr(self, 'user_id', None)
         }

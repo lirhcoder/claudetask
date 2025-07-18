@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, session
 from werkzeug.utils import secure_filename
 import os
 from pathlib import Path
@@ -9,6 +9,7 @@ from services.script_generator import TaskScriptGenerator
 from utils.validators import validate_project_path, validate_prompt
 from datetime import datetime
 from models.task import Task, TaskManager
+from models.project import ProjectManager
 
 api_bp = Blueprint('api', __name__)
 
@@ -64,6 +65,7 @@ def debug_validate_path():
 def execute_claude():
     """Execute Claude Code with given prompt."""
     import logging
+    from flask import session
     logger = logging.getLogger(__name__)
     
     data = request.get_json()
@@ -107,11 +109,12 @@ def execute_claude():
         path = Config.PROJECTS_DIR / path
         project_path = str(path)
     
-    # Execute task
+    # Execute task with user_id
     executor = get_executor()
     task_id = executor.execute(
         prompt=prompt,
-        project_path=project_path
+        project_path=project_path,
+        user_id=session.get('user_id')
     )
     
     return jsonify({
@@ -126,18 +129,36 @@ def list_projects():
     from config import Config
     projects_dir = Config.PROJECTS_DIR
     
+    # 初始化项目管理器
+    project_manager = ProjectManager()
+    
+    # 从文件系统同步项目
+    project_manager.sync_from_filesystem(projects_dir, user_id=session.get('user_id'))
+    
+    # 获取当前用户的项目
+    user_id = session.get('user_id')
+    if user_id:
+        # 如果有用户登录，只显示该用户的项目
+        db_projects = project_manager.list_projects(user_id=user_id)
+    else:
+        # 如果没有用户登录，显示所有项目
+        db_projects = project_manager.list_projects()
+    
+    # 丰富项目信息
     projects = []
-    if projects_dir.exists():
-        for item in projects_dir.iterdir():
-            if item.is_dir() and not item.name.startswith('.'):
-                project_info = {
-                    'name': item.name,
-                    'path': str(item.relative_to(Config.PROJECTS_DIR.parent)),
-                    'absolute_path': str(item.absolute()).replace('\\', '/'),
-                    'created_at': datetime.fromtimestamp(item.stat().st_ctime).isoformat(),
-                    'modified_at': datetime.fromtimestamp(item.stat().st_mtime).isoformat()
-                }
-                projects.append(project_info)
+    for proj in db_projects:
+        project_path = Path(proj['path'])
+        if project_path.exists():
+            project_info = {
+                'id': proj['id'],
+                'name': proj['name'],
+                'path': str(project_path.relative_to(Config.PROJECTS_DIR.parent)) if str(project_path).startswith(str(Config.PROJECTS_DIR.parent)) else proj['path'],
+                'absolute_path': str(project_path.absolute()).replace('\\', '/'),
+                'user_id': proj.get('user_id'),
+                'created_at': proj.get('created_at', datetime.fromtimestamp(project_path.stat().st_ctime).isoformat()),
+                'modified_at': datetime.fromtimestamp(project_path.stat().st_mtime).isoformat()
+            }
+            projects.append(project_info)
     
     return jsonify({'projects': projects}), 200
 
@@ -160,6 +181,7 @@ def create_project():
         return jsonify({'error': 'Project already exists'}), 409
     
     try:
+        # 创建项目目录
         project_path.mkdir(parents=True)
         
         # Initialize with README if requested
@@ -167,8 +189,17 @@ def create_project():
             readme_path = project_path / 'README.md'
             readme_path.write_text(f'# {project_name}\n\nCreated with Claude Code Web')
         
+        # 在数据库中创建项目记录
+        project_manager = ProjectManager()
+        project = project_manager.create_project(
+            name=project_name,
+            path=str(project_path),
+            user_id=session.get('user_id')
+        )
+        
         return jsonify({
-            'name': project_name,
+            'id': project.id,
+            'name': project.name,
             'path': str(project_path),
             'message': 'Project created successfully'
         }), 201
@@ -553,7 +584,8 @@ def add_child_task(task_id):
             id=child_id,
             prompt=prompt,
             project_path=parent_task.project_path,
-            parent_task_id=task_id
+            parent_task_id=task_id,
+            user_id=parent_task.user_id if hasattr(parent_task, 'user_id') else None
         )
         child_task.task_type = 'child'
         child_task.sequence_order = len(parent_task.children) + 1 if hasattr(parent_task, 'children') else 1
@@ -740,7 +772,8 @@ def execute_local():
         task = Task(
             id=task_id,
             prompt=prompt,
-            project_path=project_path
+            project_path=project_path,
+            user_id=session.get('user_id')
         )
         
         # Initialize additional fields
@@ -781,31 +814,74 @@ def admin_list_all_tasks():
     # TODO: 添加认证检查
     from models.user import UserManager
     
-    task_manager = TaskManager()
-    tasks = task_manager.list_all_tasks()
-    
-    # 获取用户信息
-    user_manager = UserManager()
-    for task in tasks:
-        # 通过任务关联获取用户信息
-        # 暂时使用 session 中的用户信息
-        task['user_email'] = 'unknown@example.com'
-    
-    return jsonify({'tasks': [task.to_dict() if hasattr(task, 'to_dict') else task for task in tasks]}), 200
+    try:
+        task_manager = TaskManager()
+        # 使用 list_tasks 方法获取所有任务
+        tasks_data = task_manager.list_tasks()
+        tasks = tasks_data.get('tasks', [])
+        
+        # 获取用户信息
+        user_manager = UserManager()
+        
+        # 为每个任务添加用户信息
+        for task in tasks:
+            user_id = task.get('user_id')
+            if user_id:
+                user = user_manager.get_user_by_id(user_id)
+                if user:
+                    task['user_email'] = user.email
+                else:
+                    task['user_email'] = 'unknown@example.com'
+            else:
+                # 如果没有 user_id，分配给管理员
+                task['user_email'] = 'admin@claudetask.local'
+        
+        return jsonify({'tasks': tasks}), 200
+    except Exception as e:
+        import logging
+        logging.error(f"Error in admin_list_all_tasks: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 @api_bp.route('/admin/projects', methods=['GET'])
 def admin_list_all_projects():
     """获取所有用户的项目（管理员）"""
     # TODO: 添加认证检查
-    from services.file_manager import ProjectManager
+    from models.user import UserManager
+    from config import Config
     
     project_manager = ProjectManager()
+    user_manager = UserManager()
+    
+    # 同步文件系统中的项目
+    project_manager.sync_from_filesystem(Config.PROJECTS_DIR)
+    
+    # 获取所有项目
     projects = project_manager.list_projects()
     
-    # 添加额外信息
+    # 为每个项目添加用户信息
+    enriched_projects = []
     for project in projects:
-        project['user_email'] = 'unknown@example.com'
-        project['created_at'] = datetime.now().isoformat()
+        user_id = project.get('user_id')
+        if user_id:
+            user = user_manager.get_user_by_id(user_id)
+            if user:
+                project['user_email'] = user.email
+            else:
+                project['user_email'] = 'unknown@example.com'
+        else:
+            # 如果没有 user_id，分配给管理员
+            project['user_email'] = 'admin@claudetask.local'
+        
+        # 添加文件系统信息
+        project_path = Path(project['path'])
+        if project_path.exists():
+            project['exists'] = True
+            project['modified_at'] = datetime.fromtimestamp(project_path.stat().st_mtime).isoformat()
+        else:
+            project['exists'] = False
+            project['modified_at'] = project.get('updated_at', project.get('created_at'))
+        
+        enriched_projects.append(project)
     
-    return jsonify({'projects': projects}), 200
+    return jsonify({'projects': enriched_projects}), 200

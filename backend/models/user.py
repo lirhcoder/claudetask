@@ -61,7 +61,7 @@ class SystemConfig:
 
 class UserManager:
     """用户管理器"""
-    def __init__(self, db_path: str = "claudetask.db"):
+    def __init__(self, db_path: str = "tasks.db"):
         self.db_path = db_path
         self._init_db()
         self._init_super_admin()

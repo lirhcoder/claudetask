@@ -29,13 +29,15 @@ class ClaudeExecutor:
     
     def execute(self, prompt: str, project_path: str, 
                 output_callback: Optional[Callable] = None,
-                completion_callback: Optional[Callable] = None) -> str:
+                completion_callback: Optional[Callable] = None,
+                user_id: Optional[str] = None) -> str:
         """Execute Claude Code with given prompt and project path."""
         task_id = str(uuid.uuid4())
         task = Task(
             id=task_id,
             prompt=prompt,
-            project_path=project_path
+            project_path=project_path,
+            user_id=user_id
         )
         
         self.active_tasks[task_id] = task
