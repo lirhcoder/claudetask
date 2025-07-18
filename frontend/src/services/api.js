@@ -136,6 +136,10 @@ export const repositoryApi = {
   updateRepository: (repoId, data) => apiClient.put(`/repos/${repoId}`, data),
   deleteRepository: (repoId) => apiClient.delete(`/repos/${repoId}`),
   
+  // GitHub 集成
+  importRepository: (data) => apiClient.post('/repos/import', data),
+  syncRepository: (repoId) => apiClient.post(`/repos/${repoId}/sync`),
+  
   // 分支管理
   createBranch: (repoId, data) => apiClient.post(`/repos/${repoId}/branches`, data),
   listBranches: (repoId) => apiClient.get(`/repos/${repoId}/branches`),

@@ -4,6 +4,7 @@ GitHub 风格的仓库管理 API
 from flask import Blueprint, jsonify, request, session
 from models.repository import RepositoryManager, Repository, Branch, Issue
 from services.claude_executor import get_executor
+from services.github_integration import GitHubIntegration
 from utils.decorators import login_required
 import logging
 
@@ -296,4 +297,320 @@ def list_issues(repo_id):
         
     except Exception as e:
         logger.error(f"Error listing issues: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@repo_bp.route('/repos/import', methods=['POST'])
+@login_required
+def import_repository():
+    """从 GitHub 导入仓库"""
+    try:
+        data = request.get_json()
+        github_url = data.get('github_url')
+        
+        if not github_url:
+            return jsonify({'error': 'GitHub URL is required'}), 400
+            
+        # 初始化 GitHub 集成
+        github = GitHubIntegration()
+        
+        # 导入仓库信息
+        repo_info = github.import_repository(github_url)
+        
+        # 创建本地仓库记录
+        user_id = session.get('user_id')
+        repo = repo_manager.create_repository(
+            name=repo_info['name'],
+            owner_id=user_id,
+            description=repo_info['description'],
+            is_private=repo_info['is_private'],
+            github_url=repo_info['github_url']
+        )
+        
+        # 克隆仓库到本地
+        import os
+        local_path = os.path.join('repositories', str(user_id), repo_info['name'])
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        
+        if github.clone_repository(github_url, local_path):
+            # 更新仓库本地路径
+            with repo_manager.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE repositories 
+                    SET local_path = ?, updated_at = datetime('now')
+                    WHERE id = ?
+                ''', (local_path, repo.id))
+                conn.commit()
+        
+        return jsonify({
+            'message': 'Repository imported successfully',
+            'repository': repo.to_dict()
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error importing repository: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@repo_bp.route('/repos/<repo_id>/sync', methods=['POST'])
+@login_required
+def sync_repository(repo_id):
+    """同步仓库与 GitHub"""
+    try:
+        repo = repo_manager.get_repository(repo_id)
+        if not repo:
+            return jsonify({'error': 'Repository not found'}), 404
+            
+        if not repo.github_url:
+            return jsonify({'error': 'Repository is not linked to GitHub'}), 400
+            
+        # 解析 GitHub URL
+        parts = repo.github_url.rstrip('/').split('/')
+        owner = parts[-2]
+        repo_name = parts[-1].replace('.git', '')
+        
+        # 初始化 GitHub 集成
+        github = GitHubIntegration()
+        
+        # 同步统计信息
+        stats = github.sync_repository_stats(owner, repo_name)
+        
+        # 同步分支
+        branches = github.list_branches(owner, repo_name)
+        
+        # 同步议题
+        issues = github.list_issues(owner, repo_name)
+        
+        # 更新本地数据
+        # TODO: 更新数据库中的分支和议题信息
+        
+        return jsonify({
+            'message': 'Repository synced successfully',
+            'stats': stats,
+            'branches_count': len(branches),
+            'issues_count': len(issues)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error syncing repository: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@repo_bp.route('/repos/<repo_id>/commit', methods=['POST'])
+@login_required
+def commit_changes(repo_id):
+    """提交代码更改"""
+    try:
+        data = request.get_json()
+        message = data.get('message')
+        branch = data.get('branch', 'main')
+        
+        if not message:
+            return jsonify({'error': 'Commit message is required'}), 400
+            
+        repo = repo_manager.get_repository(repo_id)
+        if not repo:
+            return jsonify({'error': 'Repository not found'}), 404
+            
+        if not repo.local_path:
+            return jsonify({'error': 'Repository has no local path'}), 400
+            
+        import subprocess
+        
+        # 切换到指定分支
+        subprocess.run(['git', 'checkout', branch], 
+                      cwd=repo.local_path, check=True, capture_output=True)
+        
+        # 添加所有更改
+        subprocess.run(['git', 'add', '.'], 
+                      cwd=repo.local_path, check=True, capture_output=True)
+        
+        # 提交更改
+        user_email = session.get('user_email', 'claude.task@sparticle.com')
+        subprocess.run(['git', 'commit', '-m', message, '--author', f'ClaudeTask <{user_email}>'], 
+                      cwd=repo.local_path, check=True, capture_output=True)
+        
+        # 记录提交到数据库
+        with repo_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO commits (repository_id, branch_name, message, author_id, sha)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (repo_id, branch, message, session.get('user_id'), 'pending'))
+            conn.commit()
+        
+        return jsonify({
+            'message': 'Changes committed successfully',
+            'commit_message': message,
+            'branch': branch
+        }), 201
+        
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git command failed: {e}")
+        return jsonify({'error': f'Git error: {e.stderr.decode() if e.stderr else str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Error committing changes: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@repo_bp.route('/repos/<repo_id>/push', methods=['POST'])
+@login_required
+def push_to_remote(repo_id):
+    """推送到远程仓库"""
+    try:
+        data = request.get_json()
+        branch = data.get('branch', 'main')
+        
+        repo = repo_manager.get_repository(repo_id)
+        if not repo:
+            return jsonify({'error': 'Repository not found'}), 404
+            
+        if not repo.local_path:
+            return jsonify({'error': 'Repository has no local path'}), 400
+            
+        if not repo.github_url:
+            return jsonify({'error': 'Repository is not linked to GitHub'}), 400
+            
+        # 初始化 GitHub 集成
+        github = GitHubIntegration()
+        
+        # 推送更改
+        success = github.push_changes(repo.local_path, branch)
+        
+        if success:
+            return jsonify({
+                'message': 'Changes pushed successfully',
+                'branch': branch
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to push changes'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error pushing to remote: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@repo_bp.route('/repos/<repo_id>/pull', methods=['POST'])
+@login_required
+def pull_from_remote(repo_id):
+    """从远程仓库拉取更新"""
+    try:
+        data = request.get_json()
+        branch = data.get('branch', 'main')
+        
+        repo = repo_manager.get_repository(repo_id)
+        if not repo:
+            return jsonify({'error': 'Repository not found'}), 404
+            
+        if not repo.local_path:
+            return jsonify({'error': 'Repository has no local path'}), 400
+            
+        if not repo.github_url:
+            return jsonify({'error': 'Repository is not linked to GitHub'}), 400
+            
+        import subprocess
+        
+        # 切换到指定分支
+        subprocess.run(['git', 'checkout', branch], 
+                      cwd=repo.local_path, check=True, capture_output=True)
+        
+        # 拉取更新
+        result = subprocess.run(['git', 'pull', 'origin', branch], 
+                               cwd=repo.local_path, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            return jsonify({
+                'message': 'Updates pulled successfully',
+                'branch': branch,
+                'output': result.stdout
+            }), 200
+        else:
+            return jsonify({
+                'error': 'Failed to pull updates',
+                'output': result.stderr
+            }), 500
+            
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git command failed: {e}")
+        return jsonify({'error': f'Git error: {e.stderr.decode() if e.stderr else str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Error pulling from remote: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@repo_bp.route('/branches/<branch_id>/pr', methods=['POST'])
+@login_required
+def create_pull_request(branch_id):
+    """创建 Pull Request"""
+    try:
+        data = request.get_json()
+        title = data.get('title')
+        description = data.get('description', '')
+        base_branch = data.get('base_branch', 'main')
+        
+        if not title:
+            return jsonify({'error': 'Pull request title is required'}), 400
+            
+        # 获取分支信息
+        with repo_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT b.*, r.github_url, r.local_path
+                FROM branches b
+                JOIN repositories r ON b.repository_id = r.id
+                WHERE b.id = ?
+            ''', (branch_id,))
+            
+            branch_row = cursor.fetchone()
+            if not branch_row:
+                return jsonify({'error': 'Branch not found'}), 404
+                
+        if not branch_row['github_url']:
+            return jsonify({'error': 'Repository is not linked to GitHub'}), 400
+            
+        # 解析 GitHub URL
+        parts = branch_row['github_url'].rstrip('/').split('/')
+        owner = parts[-2]
+        repo_name = parts[-1].replace('.git', '')
+        
+        # 初始化 GitHub 集成
+        github = GitHubIntegration()
+        
+        # 创建 Pull Request
+        pr = github.create_pull_request(
+            owner=owner,
+            repo=repo_name,
+            title=title,
+            head=branch_row['name'],
+            base=base_branch,
+            body=description
+        )
+        
+        if pr:
+            # 记录到数据库
+            with repo_manager.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO pull_requests 
+                    (repository_id, branch_id, title, description, github_pr_number, 
+                     github_pr_url, status, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    branch_row['repository_id'], branch_id, title, description,
+                    pr['number'], pr['html_url'], 'open', session.get('user_id')
+                ))
+                conn.commit()
+                
+            return jsonify({
+                'message': 'Pull request created successfully',
+                'pr_number': pr['number'],
+                'pr_url': pr['html_url'],
+                'title': title
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to create pull request'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error creating pull request: {str(e)}")
         return jsonify({'error': str(e)}), 500

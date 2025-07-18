@@ -10,7 +10,8 @@ import {
   LockOutlined,
   UnlockOutlined,
   StarOutlined,
-  ForkOutlined
+  ForkOutlined,
+  ImportOutlined
 } from '@ant-design/icons'
 import { repositoryApi } from '../services/api'
 import { useNavigate } from 'react-router-dom'
@@ -24,7 +25,10 @@ const RepositoryPage = () => {
   const [loading, setLoading] = useState(false)
   const [repositories, setRepositories] = useState([])
   const [createModalVisible, setCreateModalVisible] = useState(false)
+  const [importModalVisible, setImportModalVisible] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
   const [form] = Form.useForm()
+  const [importForm] = Form.useForm()
 
   // 加载仓库列表
   const loadRepositories = async () => {
@@ -55,6 +59,23 @@ const RepositoryPage = () => {
     } catch (error) {
       message.error('创建仓库失败')
       console.error('Create repository error:', error)
+    }
+  }
+
+  // 导入 GitHub 仓库
+  const handleImportRepository = async (values) => {
+    setImportLoading(true)
+    try {
+      await repositoryApi.importRepository(values)
+      message.success('仓库导入成功')
+      setImportModalVisible(false)
+      importForm.resetFields()
+      loadRepositories()
+    } catch (error) {
+      message.error('导入仓库失败: ' + (error.response?.data?.error || error.message))
+      console.error('Import repository error:', error)
+    } finally {
+      setImportLoading(false)
     }
   }
 
@@ -136,6 +157,12 @@ const RepositoryPage = () => {
               onClick={() => setCreateModalVisible(true)}
             >
               新建仓库
+            </Button>
+            <Button
+              icon={<ImportOutlined />}
+              onClick={() => setImportModalVisible(true)}
+            >
+              导入 GitHub 仓库
             </Button>
             <Button icon={<SyncOutlined />} onClick={loadRepositories}>
               刷新
@@ -295,6 +322,70 @@ const RepositoryPage = () => {
                 <Button onClick={() => {
                   setCreateModalVisible(false)
                   form.resetFields()
+                }}>
+                  取消
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* 导入仓库模态框 */}
+        <Modal
+          title="导入 GitHub 仓库"
+          visible={importModalVisible}
+          onCancel={() => {
+            setImportModalVisible(false)
+            importForm.resetFields()
+          }}
+          footer={null}
+          width={600}
+        >
+          <Form
+            form={importForm}
+            layout="vertical"
+            onFinish={handleImportRepository}
+          >
+            <Form.Item
+              name="github_url"
+              label="GitHub 仓库地址"
+              rules={[
+                { required: true, message: '请输入 GitHub 仓库地址' },
+                { 
+                  pattern: /^https:\/\/github\.com\/[\w-]+\/[\w.-]+$/,
+                  message: '请输入有效的 GitHub 仓库地址，格式如: https://github.com/username/repository' 
+                }
+              ]}
+            >
+              <Input
+                prefix={<GithubOutlined />}
+                placeholder="https://github.com/username/repository"
+              />
+            </Form.Item>
+
+            <div style={{ marginBottom: 16, padding: '12px', background: '#f0f2f5', borderRadius: 4 }}>
+              <h4 style={{ marginTop: 0 }}>导入说明：</h4>
+              <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
+                <li>仓库将被克隆到本地进行管理</li>
+                <li>所有分支和议题信息将被同步</li>
+                <li>如果是私有仓库，请确保已配置 GitHub 访问令牌</li>
+                <li>导入后可以随时与 GitHub 同步</li>
+              </ul>
+            </div>
+
+            <Form.Item>
+              <Space>
+                <Button 
+                  type="primary" 
+                  htmlType="submit"
+                  loading={importLoading}
+                  disabled={importLoading}
+                >
+                  开始导入
+                </Button>
+                <Button onClick={() => {
+                  setImportModalVisible(false)
+                  importForm.resetFields()
                 }}>
                   取消
                 </Button>
