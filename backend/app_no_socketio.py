@@ -18,7 +18,14 @@ def create_app(config_name=None):
     
     # Register blueprints
     from routes.api import api_bp
+    from routes.unified_api import unified_bp
+    from routes.auth import auth_bp
+    from routes.repository_api import repo_bp
+    
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(unified_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(repo_bp, url_prefix='/api')
     
     # Create upload directory
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

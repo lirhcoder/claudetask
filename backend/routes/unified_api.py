@@ -298,7 +298,7 @@ def unified_dashboard():
     # 获取用户的活跃仓库
     repos = workflow.repo_manager.list_repositories(user_id)
     # 将 Repository 对象转换为字典
-    repo_dicts = [repo.to_dict() for repo in repos]
+    repo_dicts = [repo.to_dict() if hasattr(repo, 'to_dict') else repo for repo in repos]
     active_repos = sorted(repo_dicts, key=lambda x: x.get('updated_at', ''), reverse=True)[:5]
     
     # 获取最近的任务（分支）
