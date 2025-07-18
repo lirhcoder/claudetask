@@ -79,8 +79,6 @@ const TaskWorkspace = () => {
       
       setSelectedTask(node)
       setTaskDetails(mockDetails)
-    } catch (error) {
-      console.error('Failed to load task details:', error)
     } finally {
       setLoading(false)
     }
