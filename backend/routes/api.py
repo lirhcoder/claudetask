@@ -343,11 +343,33 @@ def list_tasks():
         executor = get_executor()
         tasks = executor.get_all_tasks()
         
+        # 获取当前用户ID
+        user_id = session.get('user_id')
+        
+        # 获取用户管理器以添加邮箱信息
+        from models.user import UserManager
+        user_manager = UserManager()
+        
         # Convert to dict and sort by created_at
         task_list = []
         for task in tasks:
             try:
                 task_dict = task.to_dict()
+                # 如果有用户登录，只显示该用户的任务
+                if user_id and hasattr(task, 'user_id'):
+                    if task.user_id != user_id:
+                        continue
+                
+                # 添加用户邮箱信息
+                if task_dict.get('user_id'):
+                    user = user_manager.get_user_by_id(task_dict['user_id'])
+                    if user:
+                        task_dict['user_email'] = user.email
+                    else:
+                        task_dict['user_email'] = 'unknown@example.com'
+                else:
+                    task_dict['user_email'] = 'unknown@example.com'
+                
                 task_list.append(task_dict)
             except Exception as e:
                 import logging

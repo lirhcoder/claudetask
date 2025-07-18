@@ -79,6 +79,9 @@ class TaskDB:
             if 'error' not in columns:
                 cursor.execute('ALTER TABLE tasks ADD COLUMN error TEXT')
             
+            if 'user_id' not in columns:
+                cursor.execute('ALTER TABLE tasks ADD COLUMN user_id TEXT')
+            
             conn.commit()
     
     def save_task(self, task: 'Task'):
@@ -99,14 +102,14 @@ class TaskDB:
             cursor.execute("PRAGMA table_info(tasks)")
             columns = [col[1] for col in cursor.fetchall()]
             
-            if 'parent_task_id' in columns:
+            if 'parent_task_id' in columns and 'user_id' in columns:
                 # 使用包含新字段的插入语句
                 cursor.execute('''
                     INSERT OR REPLACE INTO tasks 
                     (id, prompt, project_path, status, output, error_message, 
                      created_at, updated_at, completed_at, metadata,
-                     parent_task_id, context, sequence_order, task_type)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     parent_task_id, context, sequence_order, task_type, user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     task.id,
                     task.prompt,
@@ -121,7 +124,8 @@ class TaskDB:
                     getattr(task, 'parent_task_id', None),
                     getattr(task, 'context', None),
                     getattr(task, 'sequence_order', 0),
-                    getattr(task, 'task_type', 'single')
+                    getattr(task, 'task_type', 'single'),
+                    getattr(task, 'user_id', None)
                 ))
             else:
                 # 使用旧的插入语句（向后兼容）
@@ -220,7 +224,8 @@ class TaskManager:
             task = Task(
                 id=task_data['id'],
                 prompt=task_data['prompt'],
-                project_path=task_data['project_path']
+                project_path=task_data['project_path'],
+                user_id=task_data.get('user_id')
             )
             task.status = task_data['status']
             task.output = task_data.get('output', '')
@@ -272,7 +277,8 @@ class TaskManager:
             task = Task(
                 id=task_id,
                 prompt=prompt,
-                project_path=project_path
+                project_path=project_path,
+                user_id=task_data.get('user_id')
             )
             # 恢复其他属性
             task.status = task_data.get('status', 'pending')
@@ -315,7 +321,8 @@ class TaskManager:
                 task = Task(
                     id=task_data['id'],
                     prompt=task_data['prompt'],
-                    project_path=task_data['project_path']
+                    project_path=task_data['project_path'],
+                    user_id=task_data.get('user_id')
                 )
                 task.status = task_data['status']
                 task.output = task_data.get('output', '')

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Table, Tag, Button, Space, message, Tooltip, Badge, Input, Select } from 'antd'
-import { ReloadOutlined, EyeOutlined, StopOutlined, SyncOutlined, SearchOutlined } from '@ant-design/icons'
+import { ReloadOutlined, EyeOutlined, StopOutlined, SyncOutlined, SearchOutlined, ClearOutlined, UserOutlined } from '@ant-design/icons'
 import { taskApi } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 
@@ -17,6 +17,8 @@ const TasksPage = () => {
   })
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [userFilter, setUserFilter] = useState('')
+  const [currentUser, setCurrentUser] = useState(null)
 
   // 格式化持续时间
   const formatDuration = (seconds) => {
@@ -87,10 +89,21 @@ const TasksPage = () => {
     }
   }, [])
 
-  // 初次加载任务
+  // 初次加载任务和用户信息
   useEffect(() => {
     loadTasks()
+    loadCurrentUser()
   }, [])
+
+  const loadCurrentUser = async () => {
+    try {
+      const { authApi } = await import('../services/api')
+      const response = await authApi.getCurrentUser()
+      setCurrentUser(response.user)
+    } catch (error) {
+      console.error('Failed to load user info:', error)
+    }
+  }
 
   // 处理自动刷新
   useEffect(() => {
@@ -123,7 +136,7 @@ const TasksPage = () => {
 
   // 当任务列表更新时，重新应用过滤器
   useEffect(() => {
-    filterTasks(tasks, searchText, statusFilter)
+    filterTasks(tasks, searchText, statusFilter, userFilter)
   }, [tasks])
 
   const loadTasks = async () => {
@@ -132,7 +145,7 @@ const TasksPage = () => {
       const data = await taskApi.listTasks()
       setTasks(data.tasks)
       // 应用当前的过滤器
-      filterTasks(data.tasks, searchText, statusFilter)
+      filterTasks(data.tasks, searchText, statusFilter, userFilter)
     } catch (error) {
       message.error('Failed to load tasks')
     } finally {
@@ -141,12 +154,21 @@ const TasksPage = () => {
   }
 
   // 过滤任务
-  const filterTasks = (taskList, search, status) => {
+  const filterTasks = (taskList, search, status, user) => {
     let filtered = [...taskList]
     
     // 状态过滤
     if (status !== 'all') {
       filtered = filtered.filter(task => task.status === status)
+    }
+    
+    // 用户过滤
+    if (user) {
+      const userLower = user.toLowerCase()
+      filtered = filtered.filter(task => {
+        const taskUser = task.user_email || task.user_id || ''
+        return taskUser.toLowerCase().includes(userLower)
+      })
     }
     
     // 文本搜索（搜索ID、提示词、项目路径）
@@ -167,13 +189,27 @@ const TasksPage = () => {
   // 处理搜索框变化
   const handleSearch = (value) => {
     setSearchText(value)
-    filterTasks(tasks, value, statusFilter)
+    filterTasks(tasks, value, statusFilter, userFilter)
   }
 
   // 处理状态过滤器变化
   const handleStatusFilter = (value) => {
     setStatusFilter(value)
-    filterTasks(tasks, searchText, value)
+    filterTasks(tasks, searchText, value, userFilter)
+  }
+
+  // 处理用户过滤器变化
+  const handleUserFilter = (value) => {
+    setUserFilter(value)
+    filterTasks(tasks, searchText, statusFilter, value)
+  }
+
+  // 清除所有过滤条件
+  const clearAllFilters = () => {
+    setSearchText('')
+    setStatusFilter('all')
+    setUserFilter('')
+    filterTasks(tasks, '', 'all', '')
   }
 
   const handleCancelTask = async (taskId) => {
@@ -235,6 +271,21 @@ const TasksPage = () => {
       width: 200,
       ellipsis: true,
       render: (path) => path.split('/').pop()
+    },
+    {
+      title: '用户',
+      dataIndex: 'user_email',
+      key: 'user_email',
+      width: 150,
+      ellipsis: true,
+      render: (email, record) => {
+        const displayUser = email || record.user_id || '未知用户'
+        return (
+          <Tooltip title={displayUser}>
+            <span>{displayUser === currentUser?.email ? '我' : displayUser}</span>
+          </Tooltip>
+        )
+      }
     },
     {
       title: 'Status',
@@ -308,7 +359,7 @@ const TasksPage = () => {
           </Space>
         </div>
         
-        <Space style={{ width: '100%', marginBottom: 16 }} size="middle">
+        <Space style={{ width: '100%', marginBottom: 16 }} size="middle" wrap>
           <Input
             placeholder="搜索任务ID、提示词或项目名称..."
             prefix={<SearchOutlined />}
@@ -330,9 +381,24 @@ const TasksPage = () => {
               { value: 'cancelled', label: 'Cancelled' }
             ]}
           />
+          <Input
+            placeholder="过滤用户..."
+            prefix={<UserOutlined />}
+            value={userFilter}
+            onChange={(e) => handleUserFilter(e.target.value)}
+            style={{ width: 200 }}
+            allowClear
+          />
+          <Button
+            icon={<ClearOutlined />}
+            onClick={clearAllFilters}
+            disabled={!searchText && statusFilter === 'all' && !userFilter}
+          >
+            清除过滤
+          </Button>
           <span style={{ color: '#666' }}>
             共 {filteredTasks.length} 个任务
-            {searchText || statusFilter !== 'all' ? ` (总计 ${tasks.length} 个)` : ''}
+            {searchText || statusFilter !== 'all' || userFilter ? ` (总计 ${tasks.length} 个)` : ''}
           </span>
         </Space>
       </div>
