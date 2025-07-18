@@ -151,11 +151,32 @@ def list_projects():
     # 根据过滤条件获取项目
     db_projects = permission_manager.get_user_projects_by_filter(user_id, filter_type)
     
+    # 获取所有任务用于统计
+    from models.task import TaskManager
+    task_manager = TaskManager()
+    all_tasks = task_manager.get_all_tasks()
+    
     # 丰富项目信息
     projects = []
     for proj in db_projects:
         project_path = Path(proj['path'])
         if project_path.exists():
+            # 计算该项目的任务统计
+            project_tasks = [t for t in all_tasks if t.project_path and (
+                t.project_path.replace('\\', '/') == str(project_path).replace('\\', '/') or
+                t.project_path.replace('\\', '/').endswith('/' + proj['name'])
+            )]
+            
+            # 统计各状态的任务数
+            task_stats = {
+                'total': len(project_tasks),
+                'pending': len([t for t in project_tasks if t.status == 'pending']),
+                'running': len([t for t in project_tasks if t.status == 'running']),
+                'completed': len([t for t in project_tasks if t.status == 'completed']),
+                'failed': len([t for t in project_tasks if t.status == 'failed']),
+                'cancelled': len([t for t in project_tasks if t.status == 'cancelled'])
+            }
+            
             project_info = {
                 'id': proj['id'],
                 'name': proj['name'],
@@ -164,7 +185,8 @@ def list_projects():
                 'user_id': proj.get('user_id'),
                 'role': proj.get('role', 'owner'),  # 用户在项目中的角色
                 'created_at': proj.get('created_at', datetime.fromtimestamp(project_path.stat().st_ctime).isoformat()),
-                'modified_at': datetime.fromtimestamp(project_path.stat().st_mtime).isoformat()
+                'modified_at': datetime.fromtimestamp(project_path.stat().st_mtime).isoformat(),
+                'task_stats': task_stats
             }
             projects.append(project_info)
     

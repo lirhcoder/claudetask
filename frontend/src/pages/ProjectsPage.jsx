@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Table, Button, Modal, Form, Input, message, Space, Tooltip, Typography, Tag, Spin, Empty, Switch, Radio } from 'antd'
-import { FolderOutlined, PlusOutlined, DeleteOutlined, EditOutlined, EyeOutlined, ReloadOutlined, FolderOpenOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Modal, Form, Input, message, Space, Tooltip, Typography, Tag, Spin, Empty, Switch, Radio, Row, Col } from 'antd'
+import { FolderOutlined, PlusOutlined, DeleteOutlined, EditOutlined, EyeOutlined, ReloadOutlined, FolderOpenOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { projectApi } from '../services/api'
+import { projectApi, taskApi } from '../services/api'
+import ProjectCard from '../components/ProjectCard'
 
 const { Title, Text } = Typography
 const { confirm } = Modal
@@ -11,8 +12,12 @@ const ProjectsPage = () => {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
+  const [createTaskModalVisible, setCreateTaskModalVisible] = useState(false)
+  const [selectedProject, setSelectedProject] = useState(null)
   const [projectFilter, setProjectFilter] = useState('all') // all, owned, participated
+  const [viewMode, setViewMode] = useState('card') // card or table
   const [form] = Form.useForm()
+  const [taskForm] = Form.useForm()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -69,6 +74,26 @@ const ProjectsPage = () => {
     navigate(`/project/${projectName}`)
   }
 
+  const handleCreateTask = (project) => {
+    setSelectedProject(project)
+    setCreateTaskModalVisible(true)
+  }
+
+  const handleSubmitTask = async (values) => {
+    if (!selectedProject) return
+    
+    try {
+      await taskApi.executeTask(values.prompt, selectedProject.absolute_path)
+      message.success('任务创建成功')
+      setCreateTaskModalVisible(false)
+      taskForm.resetFields()
+      fetchProjects() // 刷新项目列表以更新任务统计
+    } catch (error) {
+      message.error('创建任务失败')
+      console.error('Failed to create task:', error)
+    }
+  }
+
   const columns = [
     {
       title: '项目名称',
@@ -120,6 +145,21 @@ const ProjectsPage = () => {
       },
     },
     {
+      title: '任务统计',
+      key: 'task_stats',
+      render: (_, record) => {
+        const stats = record.task_stats || { total: 0, completed: 0, running: 0, failed: 0 }
+        return (
+          <Space>
+            <Tag>{stats.total} 总计</Tag>
+            {stats.running > 0 && <Tag color="processing">{stats.running} 运行中</Tag>}
+            {stats.completed > 0 && <Tag color="success">{stats.completed} 完成</Tag>}
+            {stats.failed > 0 && <Tag color="error">{stats.failed} 失败</Tag>}
+          </Space>
+        )
+      },
+    },
+    {
       title: '最后修改',
       dataIndex: 'modified_at',
       key: 'modified_at',
@@ -132,6 +172,14 @@ const ProjectsPage = () => {
       key: 'action',
       render: (_, record) => (
         <Space size="middle">
+          <Tooltip title="新建任务">
+            <Button
+              type="text"
+              icon={<PlusOutlined />}
+              onClick={() => handleCreateTask(record)}
+              style={{ color: '#1890ff' }}
+            />
+          </Tooltip>
           <Tooltip title="查看详情">
             <Button
               type="text"
@@ -164,6 +212,10 @@ const ProjectsPage = () => {
         }
         extra={
           <Space>
+            <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)}>
+              <Radio.Button value="card"><AppstoreOutlined /> 卡片</Radio.Button>
+              <Radio.Button value="table"><UnorderedListOutlined /> 列表</Radio.Button>
+            </Radio.Group>
             <Button
               icon={<ReloadOutlined />}
               onClick={fetchProjects}
@@ -203,6 +255,18 @@ const ProjectsPage = () => {
               创建第一个项目
             </Button>
           </Empty>
+        ) : viewMode === 'card' ? (
+          <Row gutter={[16, 16]}>
+            {projects.map(project => (
+              <Col key={project.id || project.name} xs={24} sm={12} lg={8} xl={6}>
+                <ProjectCard
+                  project={project}
+                  onDelete={handleDeleteProject}
+                  onCreateTask={handleCreateTask}
+                />
+              </Col>
+            ))}
+          </Row>
         ) : (
           <Table
             columns={columns}
@@ -257,6 +321,53 @@ const ProjectsPage = () => {
               <Button onClick={() => {
                 setCreateModalVisible(false)
                 form.resetFields()
+              }}>
+                取消
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={`在项目 "${selectedProject?.name}" 中创建任务`}
+        open={createTaskModalVisible}
+        onCancel={() => {
+          setCreateTaskModalVisible(false)
+          taskForm.resetFields()
+          setSelectedProject(null)
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={taskForm}
+          layout="vertical"
+          onFinish={handleSubmitTask}
+        >
+          <Form.Item
+            name="prompt"
+            label="任务描述"
+            rules={[
+              { required: true, message: '请输入任务描述' },
+            ]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="描述你想要执行的任务..."
+              maxLength={1000}
+              showCount
+            />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                创建任务
+              </Button>
+              <Button onClick={() => {
+                setCreateTaskModalVisible(false)
+                taskForm.resetFields()
+                setSelectedProject(null)
               }}>
                 取消
               </Button>

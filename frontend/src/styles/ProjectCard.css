@@ -1,0 +1,62 @@
+.project-card {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.project-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.project-card .ant-card-actions {
+  background: #fafafa;
+}
+
+.project-card .ant-card-actions > li {
+  margin: 0;
+}
+
+.project-card .ant-card-actions > li:hover {
+  background: #f0f0f0;
+}
+
+.project-card-stats {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.project-card-progress {
+  margin-top: 12px;
+}
+
+.project-card .ant-statistic-title {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.project-card .ant-statistic-content {
+  font-size: 20px;
+}
+
+/* 响应式布局 */
+@media (max-width: 575px) {
+  .project-card .ant-statistic-content {
+    font-size: 16px;
+  }
+}
+
+/* 进度条动画 */
+.project-card .ant-progress-line {
+  animation: progressAnimation 1s ease-out;
+}
+
+@keyframes progressAnimation {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
