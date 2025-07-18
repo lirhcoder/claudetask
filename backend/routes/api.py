@@ -772,3 +772,40 @@ def execute_local():
         logging.error(f"Error creating local task: {str(e)}")
         logging.error(traceback.format_exc())
         return jsonify({'error': f'Failed to create task: {str(e)}'}), 500
+
+
+# 管理员端点
+@api_bp.route('/admin/tasks', methods=['GET'])
+def admin_list_all_tasks():
+    """获取所有用户的任务（管理员）"""
+    # TODO: 添加认证检查
+    from models.user import UserManager
+    
+    task_manager = TaskManager()
+    tasks = task_manager.list_all_tasks()
+    
+    # 获取用户信息
+    user_manager = UserManager()
+    for task in tasks:
+        # 通过任务关联获取用户信息
+        # 暂时使用 session 中的用户信息
+        task['user_email'] = 'unknown@example.com'
+    
+    return jsonify({'tasks': [task.to_dict() if hasattr(task, 'to_dict') else task for task in tasks]}), 200
+
+
+@api_bp.route('/admin/projects', methods=['GET'])
+def admin_list_all_projects():
+    """获取所有用户的项目（管理员）"""
+    # TODO: 添加认证检查
+    from services.file_manager import ProjectManager
+    
+    project_manager = ProjectManager()
+    projects = project_manager.list_projects()
+    
+    # 添加额外信息
+    for project in projects:
+        project['user_email'] = 'unknown@example.com'
+        project['created_at'] = datetime.now().isoformat()
+    
+    return jsonify({'projects': projects}), 200

@@ -13,6 +13,9 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     
+    # 设置会话密钥
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    
     # Initialize extensions
     CORS(app, origins=app.config['CORS_ORIGINS'])
     # 只在启用时初始化 Socket.IO
@@ -23,9 +26,11 @@ def create_app(config_name=None):
     
     # Register blueprints
     from routes.api import api_bp
+    from routes.auth import auth_bp
     from routes.websocket import register_socketio_handlers
     
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
     register_socketio_handlers(socketio)
     
     # Create upload directory

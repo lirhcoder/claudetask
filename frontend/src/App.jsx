@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard'
 import ProjectPage from './pages/ProjectPage'
 import TasksPage from './pages/TasksPage'
 import SettingsPage from './pages/SettingsPage'
+import LoginPage from './pages/LoginPage'
+import AdminPage from './pages/AdminPage'
 import { useThemeStore } from './stores/themeStore'
 
 function App() {
@@ -23,11 +25,13 @@ function App() {
       <AntdApp>
         <Router>
           <Routes>
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="project/:projectName" element={<ProjectPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="admin" element={<AdminPage />} />
             </Route>
           </Routes>
         </Router>

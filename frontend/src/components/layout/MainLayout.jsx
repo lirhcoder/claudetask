@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Layout, Menu, Button, Space } from 'antd'
+import React, { useState, useEffect } from 'react'
+import { Layout, Menu, Button, Space, Dropdown, Avatar, message } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   ProjectOutlined,
@@ -10,6 +10,9 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
+  UserOutlined,
+  LogoutOutlined,
+  CrownOutlined,
 } from '@ant-design/icons'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -20,6 +23,34 @@ const MainLayout = () => {
   const location = useLocation()
   const { isDarkMode, toggleTheme } = useThemeStore()
   const [collapsed, setCollapsed] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
+
+  useEffect(() => {
+    // 获取当前用户信息
+    loadCurrentUser()
+  }, [])
+
+  const loadCurrentUser = async () => {
+    try {
+      const { authApi } = await import('../../services/api')
+      const data = await authApi.getCurrentUser()
+      setCurrentUser(data.user)
+    } catch (error) {
+      // 未登录，跳转到登录页
+      navigate('/login')
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      const { authApi } = await import('../../services/api')
+      await authApi.logout()
+      message.success('已退出登录')
+      navigate('/login')
+    } catch (error) {
+      message.error('退出失败')
+    }
+  }
 
   const menuItems = [
     {
@@ -37,7 +68,12 @@ const MainLayout = () => {
       icon: <SettingOutlined />,
       label: 'Settings',
     },
-  ]
+    currentUser?.is_admin && {
+      key: '/admin',
+      icon: <CrownOutlined />,
+      label: '管理员',
+    },
+  ].filter(Boolean)
 
   const handleMenuClick = ({ key }) => {
     navigate(key)
@@ -94,6 +130,41 @@ const MainLayout = () => {
               icon={isDarkMode ? <SunOutlined /> : <MoonOutlined />}
               onClick={toggleTheme}
             />
+            {currentUser && (
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'user',
+                      label: (
+                        <div>
+                          <div>{currentUser.email}</div>
+                          <div style={{ fontSize: 12, color: '#999' }}>
+                            {currentUser.is_admin ? '管理员' : '普通用户'}
+                          </div>
+                        </div>
+                      ),
+                      disabled: true,
+                    },
+                    {
+                      type: 'divider',
+                    },
+                    {
+                      key: 'logout',
+                      icon: <LogoutOutlined />,
+                      label: '退出登录',
+                      onClick: handleLogout,
+                    },
+                  ],
+                }}
+                placement="bottomRight"
+              >
+                <Avatar
+                  style={{ cursor: 'pointer', backgroundColor: '#1890ff' }}
+                  icon={<UserOutlined />}
+                />
+              </Dropdown>
+            )}
           </Space>
         </Header>
         <Content

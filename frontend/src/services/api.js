@@ -6,6 +6,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true  // 启用 cookie 以支持会话
 })
 
 // Request interceptor
@@ -29,6 +30,13 @@ apiClient.interceptors.response.use(
     return response.data
   },
   (error) => {
+    // 如果是401错误，跳转到登录页
+    if (error.response?.status === 401) {
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+  (error) => {
     if (error.response?.status === 401) {
       // Handle unauthorized
       localStorage.removeItem('token')
@@ -40,6 +48,7 @@ apiClient.interceptors.response.use(
 
 export const projectApi = {
   listProjects: () => apiClient.get('/projects'),
+  listAllProjects: () => apiClient.get('/admin/projects'),  // 管理员接口
   createProject: (name, initializeReadme = false) => 
     apiClient.post('/projects', { name, initialize_readme: initializeReadme }),
   getProjectDetails: (projectName) => apiClient.get(`/projects/${projectName}`),
@@ -60,6 +69,7 @@ export const taskApi = {
   executeTask: (prompt, projectPath) => 
     apiClient.post('/execute', { prompt, project_path: projectPath }),
   listTasks: () => apiClient.get('/tasks'),
+  listAllTasks: () => apiClient.get('/admin/tasks'),  // 管理员接口
   getTask: (taskId) => apiClient.get(`/tasks/${taskId}`),
   cancelTask: (taskId) => apiClient.post(`/tasks/${taskId}/cancel`),
   // 任务链相关
@@ -70,6 +80,21 @@ export const taskApi = {
   launchLocalExecution: (taskId) => apiClient.post(`/tasks/${taskId}/launch-local`),
   executeLocal: (prompt, projectPath) => 
     apiClient.post('/execute-local', { prompt, project_path: projectPath }),
+}
+
+export const authApi = {
+  // 认证相关
+  login: (data) => apiClient.post('/auth/login', data),
+  register: (data) => apiClient.post('/auth/register', data),
+  logout: () => apiClient.post('/auth/logout'),
+  getCurrentUser: () => apiClient.get('/auth/me'),
+  getConfig: () => apiClient.get('/auth/config'),
+  
+  // 管理员接口
+  getAdminConfig: () => apiClient.get('/auth/admin/config'),
+  updateAdminConfig: (data) => apiClient.put('/auth/admin/config', data),
+  listUsers: () => apiClient.get('/auth/admin/users'),
+  makeUserAdmin: (userId) => apiClient.post(`/auth/admin/users/${userId}/make-admin`),
 }
 
 export default apiClient
