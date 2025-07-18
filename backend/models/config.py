@@ -20,17 +20,54 @@ class ConfigManager:
     def _init_db(self):
         """初始化配置表"""
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS system_config (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL,
-                    type TEXT DEFAULT 'string',
-                    description TEXT,
-                    category TEXT DEFAULT 'general',
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_by TEXT
-                )
-            ''')
+            cursor = conn.cursor()
+            
+            # 检查表是否存在以及结构是否正确
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='system_config'")
+            table_exists = cursor.fetchone()
+            
+            if table_exists:
+                # 检查表结构
+                cursor.execute("PRAGMA table_info(system_config)")
+                columns = cursor.fetchall()
+                column_names = [col[1] for col in columns]
+                
+                # 如果是旧的表结构（没有 value 列），重建表
+                if 'value' not in column_names:
+                    logger.info("Detected old system_config table structure, recreating...")
+                    
+                    # 备份旧表
+                    cursor.execute("ALTER TABLE system_config RENAME TO system_config_old")
+                    
+                    # 创建新表
+                    cursor.execute('''
+                        CREATE TABLE system_config (
+                            key TEXT PRIMARY KEY,
+                            value TEXT NOT NULL,
+                            type TEXT DEFAULT 'string',
+                            description TEXT,
+                            category TEXT DEFAULT 'general',
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_by TEXT
+                        )
+                    ''')
+                    
+                    # 删除旧表
+                    cursor.execute("DROP TABLE IF EXISTS system_config_old")
+            else:
+                # 创建新表
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS system_config (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        type TEXT DEFAULT 'string',
+                        description TEXT,
+                        category TEXT DEFAULT 'general',
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_by TEXT
+                    )
+                ''')
+            
             conn.commit()
     
     def get_config(self, key: str, default: Any = None) -> Any:
