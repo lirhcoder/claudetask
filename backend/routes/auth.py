@@ -171,11 +171,67 @@ def make_admin(user_id):
     user = user_manager.get_user_by_id(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
-        
+    
+    # 使用新的方法更新管理员状态
+    user_manager.make_user_admin(user_id)
     user.is_admin = True
-    # TODO: 更新数据库中的管理员状态
     
     return jsonify({
         'message': '已设置为管理员',
+        'user': user.to_dict()
+    }), 200
+
+@auth_bp.route('/admin/users/register', methods=['POST'])
+@admin_required
+def admin_register_user():
+    """管理员直接注册新用户"""
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    username = data.get('username', '').strip()
+    claude_token = data.get('claude_token', '').strip()
+    is_admin = data.get('is_admin', False)
+    
+    # 验证邮箱格式
+    if not email or not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+        return jsonify({'error': '请输入有效的邮箱地址'}), 400
+    
+    # 生成默认密码：邮箱前缀 + 123456
+    default_password = email.split('@')[0] + '123456'
+    
+    # 创建用户
+    user = user_manager.create_user(
+        email=email, 
+        password=default_password, 
+        username=username,
+        claude_token=claude_token if claude_token else None,
+        is_admin=is_admin
+    )
+    
+    if not user:
+        return jsonify({'error': '该邮箱已被注册'}), 400
+    
+    return jsonify({
+        'message': '用户创建成功',
+        'user': user.to_dict(),
+        'default_password': default_password
+    }), 201
+
+@auth_bp.route('/admin/users/<user_id>/claude-token', methods=['PUT'])
+@admin_required
+def update_user_claude_token(user_id):
+    """更新用户的Claude token（管理员）"""
+    data = request.get_json()
+    claude_token = data.get('claude_token', '').strip()
+    
+    user = user_manager.get_user_by_id(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # 更新token
+    user_manager.update_claude_token(user_id, claude_token)
+    user.claude_token = claude_token
+    
+    return jsonify({
+        'message': 'Claude token已更新',
         'user': user.to_dict()
     }), 200

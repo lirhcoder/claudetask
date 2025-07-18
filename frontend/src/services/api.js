@@ -96,6 +96,9 @@ export const authApi = {
   updateAdminConfig: (data) => apiClient.put('/auth/admin/config', data),
   listUsers: () => apiClient.get('/auth/admin/users'),
   makeUserAdmin: (userId) => apiClient.post(`/auth/admin/users/${userId}/make-admin`),
+  adminRegisterUser: (data) => apiClient.post('/auth/admin/users/register', data),
+  updateUserClaudeToken: (userId, claudeToken) => 
+    apiClient.put(`/auth/admin/users/${userId}/claude-token`, { claude_token: claudeToken }),
 }
 
 export default apiClient

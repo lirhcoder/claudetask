@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Table, Tabs, Form, Input, Button, message, Tag, Space, Statistic, Row, Col, Switch, Typography, Modal, Empty } from 'antd'
-import { UserOutlined, ProjectOutlined, FileTextOutlined, SettingOutlined, ReloadOutlined, CrownOutlined } from '@ant-design/icons'
+import { Card, Table, Tabs, Form, Input, Button, message, Tag, Space, Statistic, Row, Col, Switch, Typography, Modal, Empty, Tooltip } from 'antd'
+import { UserOutlined, ProjectOutlined, FileTextOutlined, SettingOutlined, ReloadOutlined, CrownOutlined, PlusOutlined, KeyOutlined, CopyOutlined } from '@ant-design/icons'
 import { authApi, taskApi, projectApi } from '../services/api'
 
 const { Title, Text } = Typography
@@ -19,6 +19,12 @@ const AdminPage = () => {
     runningTasks: 0
   })
   const [form] = Form.useForm()
+  const [registerModalVisible, setRegisterModalVisible] = useState(false)
+  const [registerForm] = Form.useForm()
+  const [newUserPassword, setNewUserPassword] = useState('')
+  const [tokenModalVisible, setTokenModalVisible] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [tokenForm] = Form.useForm()
 
   useEffect(() => {
     loadAllData()
@@ -88,6 +94,58 @@ const AdminPage = () => {
     })
   }
 
+  const handleRegisterUser = async (values) => {
+    try {
+      const response = await authApi.adminRegisterUser(values)
+      message.success('用户创建成功')
+      setNewUserPassword(response.default_password)
+      setRegisterModalVisible(false)
+      registerForm.resetFields()
+      loadAllData()
+      
+      // 显示默认密码
+      Modal.info({
+        title: '用户创建成功',
+        content: (
+          <div>
+            <p>用户已创建成功，默认密码为：</p>
+            <Input.Password 
+              value={response.default_password} 
+              readOnly 
+              addonAfter={
+                <Tooltip title="复制密码">
+                  <CopyOutlined 
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(response.default_password)
+                      message.success('密码已复制')
+                    }}
+                  />
+                </Tooltip>
+              }
+            />
+            <p style={{ marginTop: 16 }}>请通知用户首次登录后修改密码</p>
+          </div>
+        ),
+        width: 480
+      })
+    } catch (error) {
+      message.error('创建用户失败')
+    }
+  }
+
+  const handleUpdateToken = async (values) => {
+    try {
+      await authApi.updateUserClaudeToken(selectedUser.id, values.claude_token)
+      message.success('Claude token已更新')
+      setTokenModalVisible(false)
+      tokenForm.resetFields()
+      loadAllData()
+    } catch (error) {
+      message.error('更新token失败')
+    }
+  }
+
   const userColumns = [
     {
       title: '邮箱',
@@ -104,6 +162,34 @@ const AdminPage = () => {
       title: '用户名',
       dataIndex: 'username',
       key: 'username'
+    },
+    {
+      title: 'Claude Token',
+      dataIndex: 'claude_token',
+      key: 'claude_token',
+      width: 200,
+      render: (token, record) => (
+        <Space>
+          {token ? (
+            <Tooltip title={token}>
+              <Text code>{token.substring(0, 8)}...</Text>
+            </Tooltip>
+          ) : (
+            <Text type="secondary">未设置</Text>
+          )}
+          <Button
+            size="small"
+            icon={<KeyOutlined />}
+            onClick={() => {
+              setSelectedUser(record)
+              tokenForm.setFieldsValue({ claude_token: record.claude_token || '' })
+              setTokenModalVisible(true)
+            }}
+          >
+            管理
+          </Button>
+        </Space>
+      )
     },
     {
       title: '注册时间',
@@ -268,13 +354,21 @@ const AdminPage = () => {
       <Card>
         <Tabs defaultActiveKey="users">
           <TabPane tab={<span><UserOutlined />用户管理</span>} key="users">
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={loadAllData}
-              style={{ marginBottom: 16 }}
-            >
-              刷新数据
-            </Button>
+            <Space style={{ marginBottom: 16 }}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={loadAllData}
+              >
+                刷新数据
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setRegisterModalVisible(true)}
+              >
+                注册新用户
+              </Button>
+            </Space>
             <Table
               columns={userColumns}
               dataSource={users}
@@ -330,6 +424,125 @@ const AdminPage = () => {
           </TabPane>
         </Tabs>
       </Card>
+
+      {/* 注册新用户弹窗 */}
+      <Modal
+        title="注册新用户"
+        open={registerModalVisible}
+        onCancel={() => {
+          setRegisterModalVisible(false)
+          registerForm.resetFields()
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={registerForm}
+          layout="vertical"
+          onFinish={handleRegisterUser}
+        >
+          <Form.Item
+            name="email"
+            label="邮箱"
+            rules={[
+              { required: true, message: '请输入邮箱' },
+              { type: 'email', message: '请输入有效的邮箱地址' }
+            ]}
+          >
+            <Input placeholder="user@company.com" />
+          </Form.Item>
+
+          <Form.Item
+            name="username"
+            label="用户名"
+            help="留空则使用邮箱前缀作为用户名"
+          >
+            <Input placeholder="可选" />
+          </Form.Item>
+
+          <Form.Item
+            name="claude_token"
+            label="Claude Token"
+            help="用于Claude登录的token，可以后续设置"
+          >
+            <Input.TextArea 
+              placeholder="sk-ant-api03-..." 
+              rows={3}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="is_admin"
+            valuePropName="checked"
+            initialValue={false}
+          >
+            <Switch checkedChildren="管理员" unCheckedChildren="普通用户" />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                创建用户
+              </Button>
+              <Button onClick={() => {
+                setRegisterModalVisible(false)
+                registerForm.resetFields()
+              }}>
+                取消
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 管理Claude Token弹窗 */}
+      <Modal
+        title="管理Claude Token"
+        open={tokenModalVisible}
+        onCancel={() => {
+          setTokenModalVisible(false)
+          tokenForm.resetFields()
+          setSelectedUser(null)
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={tokenForm}
+          layout="vertical"
+          onFinish={handleUpdateToken}
+        >
+          <Form.Item label="用户">
+            <Input value={selectedUser?.email} disabled />
+          </Form.Item>
+
+          <Form.Item
+            name="claude_token"
+            label="Claude Token"
+            help="留空则清除token"
+          >
+            <Input.TextArea 
+              placeholder="sk-ant-api03-..." 
+              rows={3}
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                更新Token
+              </Button>
+              <Button onClick={() => {
+                setTokenModalVisible(false)
+                tokenForm.resetFields()
+                setSelectedUser(null)
+              }}>
+                取消
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

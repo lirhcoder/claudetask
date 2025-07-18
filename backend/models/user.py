@@ -11,7 +11,8 @@ from typing import Optional, List, Dict
 class User:
     def __init__(self, id: Optional[str] = None, email: str = "", username: str = "", 
                  password_hash: str = "", is_admin: bool = False, 
-                 created_at: Optional[datetime] = None, last_login: Optional[datetime] = None):
+                 created_at: Optional[datetime] = None, last_login: Optional[datetime] = None,
+                 claude_token: Optional[str] = None):
         self.id = id
         self.email = email
         self.username = username or email.split('@')[0]
@@ -19,6 +20,7 @@ class User:
         self.is_admin = is_admin
         self.created_at = created_at or datetime.now()
         self.last_login = last_login
+        self.claude_token = claude_token
         
     def set_password(self, password: str):
         """设置密码（加密存储）"""
@@ -38,7 +40,8 @@ class User:
             'username': self.username,
             'is_admin': self.is_admin,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'last_login': self.last_login.isoformat() if self.last_login else None
+            'last_login': self.last_login.isoformat() if self.last_login else None,
+            'claude_token': self.claude_token
         }
 
 
@@ -85,9 +88,16 @@ class UserManager:
                 password_hash TEXT NOT NULL,
                 is_admin BOOLEAN DEFAULT 0,
                 created_at TEXT NOT NULL,
-                last_login TEXT
+                last_login TEXT,
+                claude_token TEXT
             )
         ''')
+        
+        # 添加claude_token列（如果不存在）
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'claude_token' not in columns:
+            cursor.execute('ALTER TABLE users ADD COLUMN claude_token TEXT')
         
         # 创建系统配置表
         cursor.execute('''
@@ -142,13 +152,16 @@ class UserManager:
         conn.commit()
         conn.close()
         
-    def create_user(self, email: str, password: str, username: Optional[str] = None) -> Optional[User]:
+    def create_user(self, email: str, password: str, username: Optional[str] = None, 
+                   claude_token: Optional[str] = None, is_admin: bool = False) -> Optional[User]:
         """创建新用户"""
         import uuid
         user = User(
             id=str(uuid.uuid4()),
             email=email,
-            username=username or email.split('@')[0]
+            username=username or email.split('@')[0],
+            claude_token=claude_token,
+            is_admin=is_admin
         )
         user.set_password(password)
         
@@ -156,10 +169,10 @@ class UserManager:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO users (id, email, username, password_hash, is_admin, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO users (id, email, username, password_hash, is_admin, created_at, claude_token)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (user.id, user.email, user.username, user.password_hash, 
-                  0, user.created_at.isoformat()))
+                  1 if is_admin else 0, user.created_at.isoformat(), claude_token))
             conn.commit()
             conn.close()
             return user
@@ -171,7 +184,7 @@ class UserManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT id, email, username, password_hash, is_admin, created_at, last_login
+            SELECT id, email, username, password_hash, is_admin, created_at, last_login, claude_token
             FROM users WHERE email = ?
         ''', (email,))
         row = cursor.fetchone()
@@ -185,7 +198,8 @@ class UserManager:
                 password_hash=row[3],
                 is_admin=bool(row[4]),
                 created_at=datetime.fromisoformat(row[5]),
-                last_login=datetime.fromisoformat(row[6]) if row[6] else None
+                last_login=datetime.fromisoformat(row[6]) if row[6] else None,
+                claude_token=row[7] if len(row) > 7 else None
             )
         return None
         
@@ -194,7 +208,7 @@ class UserManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT id, email, username, password_hash, is_admin, created_at, last_login
+            SELECT id, email, username, password_hash, is_admin, created_at, last_login, claude_token
             FROM users WHERE id = ?
         ''', (user_id,))
         row = cursor.fetchone()
@@ -208,7 +222,8 @@ class UserManager:
                 password_hash=row[3],
                 is_admin=bool(row[4]),
                 created_at=datetime.fromisoformat(row[5]),
-                last_login=datetime.fromisoformat(row[6]) if row[6] else None
+                last_login=datetime.fromisoformat(row[6]) if row[6] else None,
+                claude_token=row[7] if len(row) > 7 else None
             )
         return None
         
@@ -227,7 +242,7 @@ class UserManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT id, email, username, password_hash, is_admin, created_at, last_login
+            SELECT id, email, username, password_hash, is_admin, created_at, last_login, claude_token
             FROM users ORDER BY created_at DESC
         ''')
         rows = cursor.fetchall()
@@ -242,7 +257,8 @@ class UserManager:
                 password_hash=row[3],
                 is_admin=bool(row[4]),
                 created_at=datetime.fromisoformat(row[5]),
-                last_login=datetime.fromisoformat(row[6]) if row[6] else None
+                last_login=datetime.fromisoformat(row[6]) if row[6] else None,
+                claude_token=row[7] if len(row) > 7 else None
             ))
         return users
         
@@ -294,3 +310,23 @@ class UserManager:
             
         domain = email.split('@')[1] if '@' in email else ''
         return domain == config.allowed_email_domain.lstrip('@')
+    
+    def update_claude_token(self, user_id: str, token: str):
+        """更新用户的Claude token"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE users SET claude_token = ? WHERE id = ?
+        ''', (token, user_id))
+        conn.commit()
+        conn.close()
+    
+    def make_user_admin(self, user_id: str):
+        """将用户设为管理员"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE users SET is_admin = 1 WHERE id = ?
+        ''', (user_id,))
+        conn.commit()
+        conn.close()
