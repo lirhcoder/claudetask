@@ -29,12 +29,14 @@ def create_app(config_name=None):
     from routes.auth import auth_bp
     from routes.task_filesystem_api import task_fs_bp
     from routes.repository_api import repo_bp
+    from routes.webhook_api import webhook_bp
     from routes.websocket import register_socketio_handlers
     
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(task_fs_bp, url_prefix='/api/taskfs')
     app.register_blueprint(repo_bp, url_prefix='/api')
+    app.register_blueprint(webhook_bp, url_prefix='/api/webhooks')
     register_socketio_handlers(socketio)
     
     # Create upload directory

@@ -614,3 +614,119 @@ def create_pull_request(branch_id):
     except Exception as e:
         logger.error(f"Error creating pull request: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+@repo_bp.route('/repos/<repo_id>/webhook', methods=['POST'])
+@login_required
+def create_webhook(repo_id):
+    """为仓库创建 GitHub Webhook"""
+    try:
+        data = request.get_json()
+        webhook_url = data.get('webhook_url')
+        
+        if not webhook_url:
+            # 使用默认的 webhook URL
+            base_url = request.host_url.rstrip('/')
+            webhook_url = f"{base_url}/api/webhooks/github"
+        
+        repo = repo_manager.get_repository(repo_id)
+        if not repo:
+            return jsonify({'error': 'Repository not found'}), 404
+            
+        if not repo.github_url:
+            return jsonify({'error': 'Repository is not linked to GitHub'}), 400
+            
+        # 解析 GitHub URL
+        parts = repo.github_url.rstrip('/').split('/')
+        owner = parts[-2]
+        repo_name = parts[-1].replace('.git', '')
+        
+        # 初始化 GitHub 集成
+        github = GitHubIntegration()
+        
+        # 获取 webhook 密钥
+        import os
+        webhook_secret = os.getenv('GITHUB_WEBHOOK_SECRET')
+        
+        # 创建 webhook
+        webhook = github.create_webhook(
+            owner=owner,
+            repo=repo_name,
+            webhook_url=webhook_url,
+            secret=webhook_secret
+        )
+        
+        if webhook:
+            # 更新数据库
+            with repo_manager.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE repositories 
+                    SET webhook_id = ?, webhook_url = ?, webhook_active = 1, 
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                ''', (webhook['id'], webhook_url, repo_id))
+                conn.commit()
+                
+            return jsonify({
+                'message': 'Webhook created successfully',
+                'webhook_id': webhook['id'],
+                'webhook_url': webhook_url,
+                'events': webhook.get('events', [])
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to create webhook'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error creating webhook: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@repo_bp.route('/repos/<repo_id>/webhook', methods=['DELETE'])
+@login_required
+def delete_webhook(repo_id):
+    """删除仓库的 GitHub Webhook"""
+    try:
+        repo = repo_manager.get_repository(repo_id)
+        if not repo:
+            return jsonify({'error': 'Repository not found'}), 404
+            
+        # 获取 webhook ID
+        with repo_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT webhook_id FROM repositories WHERE id = ?', (repo_id,))
+            row = cursor.fetchone()
+            
+            if not row or not row['webhook_id']:
+                return jsonify({'error': 'No webhook configured'}), 404
+                
+            webhook_id = row['webhook_id']
+            
+        # 解析 GitHub URL
+        parts = repo.github_url.rstrip('/').split('/')
+        owner = parts[-2]
+        repo_name = parts[-1].replace('.git', '')
+        
+        # 删除 webhook
+        github = GitHubIntegration()
+        success = github.delete_webhook(owner, repo_name, int(webhook_id))
+        
+        if success:
+            # 更新数据库
+            with repo_manager.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE repositories 
+                    SET webhook_id = NULL, webhook_url = NULL, webhook_active = 0,
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                ''', (repo_id,))
+                conn.commit()
+                
+            return jsonify({'message': 'Webhook deleted successfully'}), 200
+        else:
+            return jsonify({'error': 'Failed to delete webhook'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error deleting webhook: {str(e)}")
+        return jsonify({'error': str(e)}), 500

@@ -220,3 +220,73 @@ class GitHubIntegration:
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to push changes: {e}")
             return False
+    
+    def create_webhook(self, owner: str, repo: str, webhook_url: str, 
+                      events: List[str] = None, secret: Optional[str] = None) -> Optional[Dict]:
+        """创建 GitHub Webhook"""
+        if events is None:
+            events = ['push', 'pull_request', 'issues', 'issue_comment', 
+                     'create', 'delete', 'release']
+        
+        url = f"{self.api_base}/repos/{owner}/{repo}/hooks"
+        
+        config = {
+            'url': webhook_url,
+            'content_type': 'json',
+            'insecure_ssl': '0'
+        }
+        
+        if secret:
+            config['secret'] = secret
+        
+        data = {
+            'name': 'web',
+            'active': True,
+            'events': events,
+            'config': config
+        }
+        
+        response = requests.post(url, json=data, headers=self.headers)
+        
+        if response.status_code == 201:
+            webhook = response.json()
+            logger.info(f"Created webhook for {owner}/{repo}")
+            return webhook
+        else:
+            logger.error(f"Failed to create webhook: {response.status_code} - {response.text}")
+            return None
+    
+    def list_webhooks(self, owner: str, repo: str) -> List[Dict]:
+        """列出仓库的 Webhooks"""
+        url = f"{self.api_base}/repos/{owner}/{repo}/hooks"
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.error(f"Failed to list webhooks: {response.status_code}")
+            return []
+    
+    def delete_webhook(self, owner: str, repo: str, hook_id: int) -> bool:
+        """删除 Webhook"""
+        url = f"{self.api_base}/repos/{owner}/{repo}/hooks/{hook_id}"
+        response = requests.delete(url, headers=self.headers)
+        
+        if response.status_code == 204:
+            logger.info(f"Deleted webhook {hook_id} for {owner}/{repo}")
+            return True
+        else:
+            logger.error(f"Failed to delete webhook: {response.status_code}")
+            return False
+    
+    def test_webhook(self, owner: str, repo: str, hook_id: int) -> bool:
+        """测试 Webhook"""
+        url = f"{self.api_base}/repos/{owner}/{repo}/hooks/{hook_id}/tests"
+        response = requests.post(url, headers=self.headers)
+        
+        if response.status_code == 204:
+            logger.info(f"Triggered test for webhook {hook_id}")
+            return True
+        else:
+            logger.error(f"Failed to test webhook: {response.status_code}")
+            return False
