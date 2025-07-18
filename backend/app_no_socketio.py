@@ -22,12 +22,14 @@ def create_app(config_name=None):
     from routes.auth import auth_bp
     from routes.repository_api import repo_bp
     from routes.config_api import config_bp
+    from routes.agent_api import agent_bp
     
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(unified_bp)
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(repo_bp, url_prefix='/api')
     app.register_blueprint(config_bp, url_prefix='/api')
+    app.register_blueprint(agent_bp)
     
     # Create upload directory
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
