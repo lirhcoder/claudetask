@@ -33,8 +33,13 @@ class Project:
 class ProjectDB:
     """SQLite数据库管理器，用于持久化项目数据"""
     
-    def __init__(self, db_path: str = "tasks.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # 使用绝对路径，确保总是使用同一个数据库文件
+            from pathlib import Path
+            self.db_path = str(Path(__file__).parent.parent / "tasks.db")
+        else:
+            self.db_path = db_path
         self._init_db()
     
     @contextmanager
@@ -145,7 +150,7 @@ class ProjectDB:
 class ProjectManager:
     """项目管理器，提供项目的增删改查功能"""
     
-    def __init__(self, db_path: str = "tasks.db"):
+    def __init__(self, db_path: str = None):
         self.db = ProjectDB(db_path)
     
     def create_project(self, name: str, path: str, user_id: Optional[str] = None) -> Project:

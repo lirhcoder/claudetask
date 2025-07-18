@@ -911,6 +911,9 @@ def admin_list_all_projects():
             if user:
                 project['user_email'] = user.email
             else:
+                # 调试：记录找不到的用户ID
+                import logging
+                logging.warning(f"User not found for ID: {user_id}")
                 project['user_email'] = 'unknown@example.com'
         else:
             # 如果没有 user_id，分配给管理员

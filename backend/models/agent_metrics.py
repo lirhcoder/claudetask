@@ -45,8 +45,13 @@ class AgentMetrics:
 class AgentMetricsDB:
     """Agent指标数据库管理器"""
     
-    def __init__(self, db_path: str = "tasks.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # 使用绝对路径，确保总是使用同一个数据库文件
+            from pathlib import Path
+            self.db_path = str(Path(__file__).parent.parent / "tasks.db")
+        else:
+            self.db_path = db_path
         self._init_db()
     
     @contextmanager
@@ -230,7 +235,7 @@ class AgentMetricsDB:
 class AgentMetricsManager:
     """Agent指标管理器"""
     
-    def __init__(self, db_path: str = "tasks.db"):
+    def __init__(self, db_path: str = None):
         self.db = AgentMetricsDB(db_path)
     
     def update_task_metrics(self, user_id: str, execution_time: float):
