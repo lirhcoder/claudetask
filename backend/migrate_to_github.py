@@ -22,27 +22,27 @@ class GitHubMigration:
         
     def migrate_all(self):
         """执行完整迁移"""
-        logging.info("开始迁移到 GitHub 风格系统...")
+        logging.info("Starting migration to GitHub style system...")
         
-        # 1. 备份数据库
+        # 1. Backup database
         self.backup_database()
         
-        # 2. 迁移项目到仓库
+        # 2. Migrate projects to repositories
         self.migrate_projects_to_repos()
         
-        # 3. 迁移任务到分支
+        # 3. Migrate tasks to branches
         self.migrate_tasks_to_branches()
         
-        # 4. 更新 API 兼容性
+        # 4. Update API compatibility
         self.update_api_compatibility()
         
-        logging.info("迁移完成！")
+        logging.info("Migration completed!")
         
     def backup_database(self):
         """备份数据库"""
         backup_path = f"{self.db_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         shutil.copy2(self.db_path, backup_path)
-        logging.info(f"数据库已备份到: {backup_path}")
+        logging.info(f"Database backed up to: {backup_path}")
         
     def migrate_projects_to_repos(self):
         """将项目迁移到仓库"""
@@ -56,12 +56,12 @@ class GitHubMigration:
         for project in projects:
             project_id, name, description, created_at, updated_at = project[:5]
             
-            logging.info(f"迁移项目: {name}")
+            logging.info(f"Migrating project: {name}")
             
-            # 检查是否已存在对应的仓库
+            # Check if repository already exists
             cursor.execute('SELECT id FROM repositories WHERE project_id = ?', (project_id,))
             if cursor.fetchone():
-                logging.info(f"项目 {name} 已有对应仓库，跳过")
+                logging.info(f"Project {name} already has repository, skipping")
                 continue
             
             # 创建对应的仓库记录
@@ -100,7 +100,7 @@ class GitHubMigration:
                     subprocess.run(['git', 'commit', '-m', 'Initial migration from project'], 
                                  cwd=repo_path, capture_output=True)
                 
-                logging.info(f"项目文件已迁移到: {repo_path}")
+                logging.info(f"Project files migrated to: {repo_path}")
         
         conn.commit()
         conn.close()
@@ -127,15 +127,15 @@ class GitHubMigration:
             project_id = task_row[-1]
             
             if not project_id:
-                logging.warning(f"任务 {title} 没有关联项目，跳过")
+                logging.warning(f"Task {title} has no associated project, skipping")
                 continue
             
-            logging.info(f"迁移任务: {title}")
+            logging.info(f"Migrating task: {title}")
             
-            # 检查是否已存在对应的分支
+            # Check if branch already exists
             cursor.execute('SELECT id FROM branches WHERE task_id = ?', (task_id,))
             if cursor.fetchone():
-                logging.info(f"任务 {title} 已有对应分支，跳过")
+                logging.info(f"Task {title} already has branch, skipping")
                 continue
             
             # 创建对应的分支记录
@@ -207,7 +207,7 @@ class GitHubMigration:
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(compatibility_config, f, indent=2, ensure_ascii=False)
         
-        logging.info(f"API 兼容性配置已保存到: {config_path}")
+        logging.info(f"API compatibility config saved to: {config_path}")
         
         # 创建兼容性中间件
         self.create_compatibility_middleware()
@@ -302,31 +302,38 @@ def init_compatibility(app):
         with open('backend/compatibility.py', 'w', encoding='utf-8') as f:
             f.write(middleware_code)
         
-        logging.info("兼容性中间件已创建")
+        logging.info("Compatibility middleware created")
 
 
 def main():
     """执行迁移"""
+    # 设置控制台编码为 UTF-8
+    import sys
+    if sys.platform == 'win32':
+        import codecs
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    
     migration = GitHubMigration()
     
-    print("=== GitHub 风格系统迁移工具 ===")
-    print("\n此脚本将：")
-    print("1. 备份现有数据库")
-    print("2. 将项目迁移到仓库系统")
-    print("3. 将任务迁移到分支系统")
-    print("4. 创建 API 兼容层")
-    print("\n迁移后旧的 API 仍可使用，会自动转发到新 API")
+    print("=== GitHub Style System Migration Tool ===")
+    print("\nThis script will:")
+    print("1. Backup existing database")
+    print("2. Migrate projects to repository system")
+    print("3. Migrate tasks to branch system")
+    print("4. Create API compatibility layer")
+    print("\nOld APIs will continue to work and automatically forward to new APIs")
     
-    response = input("\n是否继续？(y/n): ")
+    response = input("\nContinue? (y/n): ")
     if response.lower() == 'y':
         migration.migrate_all()
-        print("\n✅ 迁移完成！")
-        print("\n下一步：")
-        print("1. 重启后端服务")
-        print("2. 测试新旧 API 是否正常工作")
-        print("3. 逐步更新前端使用新 API")
+        print("\n✅ Migration completed!")
+        print("\nNext steps:")
+        print("1. Restart backend service")
+        print("2. Test both old and new APIs")
+        print("3. Gradually update frontend to use new APIs")
     else:
-        print("已取消迁移")
+        print("Migration cancelled")
 
 
 if __name__ == '__main__':
