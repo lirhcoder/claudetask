@@ -35,35 +35,9 @@ class ClaudeExecutor:
         import logging
         logger = logging.getLogger(__name__)
         
-        # 如果没有 user_id，尝试从项目路径推断并创建用户
+        # 如果没有 user_id，记录警告但不创建用户
         if not user_id:
-            from utils.user_inference import infer_user_from_project_path, construct_email
-            from models.user import UserManager
-            
-            user_info = infer_user_from_project_path(project_path)
-            if user_info:
-                username, domain = user_info
-                inferred_email = construct_email(username, domain)
-                
-                # 检查用户是否存在，不存在则创建
-                user_manager = UserManager()
-                user = user_manager.get_user_by_email(inferred_email)
-                
-                if not user:
-                    logger.info(f"Creating new user from task: {inferred_email}")
-                    # 创建新用户，密码为用户名+默认后缀
-                    password = username.split('@')[0] + '123456'
-                    user = user_manager.create_user(
-                        email=inferred_email,
-                        password=password,
-                        username=username.split('@')[0]
-                    )
-                    if user:
-                        user_id = user.id
-                        logger.info(f"Created user {inferred_email} with ID {user_id}")
-                else:
-                    user_id = user.id
-                    logger.info(f"Found existing user {inferred_email} with ID {user_id}")
+            logger.warning(f"No user_id provided for task in project: {project_path}")
         
         task_id = str(uuid.uuid4())
         task = Task(

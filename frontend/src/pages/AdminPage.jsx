@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Table, Tabs, Form, Input, Button, message, Tag, Space, Statistic, Row, Col, Switch, Typography, Modal, Empty, Tooltip } from 'antd'
 import { UserOutlined, ProjectOutlined, FileTextOutlined, SettingOutlined, ReloadOutlined, CrownOutlined, PlusOutlined, KeyOutlined, CopyOutlined } from '@ant-design/icons'
-import { authApi, taskApi, projectApi } from '../services/api'
+import { authApi, taskApi, projectApi, adminApi } from '../services/api'
 
 const { Title, Text } = Typography
 const { TabPane } = Tabs
@@ -146,6 +146,25 @@ const AdminPage = () => {
     }
   }
 
+  const handleDeleteUser = (user) => {
+    Modal.confirm({
+      title: '确认删除用户',
+      content: `确定要删除用户 ${user.email} 吗？此操作不可恢复。`,
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await adminApi.deleteUser(user.id)
+          message.success('用户已删除')
+          loadAllData()
+        } catch (error) {
+          message.error('删除用户失败')
+        }
+      }
+    })
+  }
+
   const userColumns = [
     {
       title: '邮箱',
@@ -213,6 +232,14 @@ const AdminPage = () => {
               设为管理员
             </Button>
           )}
+          <Button 
+            size="small" 
+            danger
+            onClick={() => handleDeleteUser(record)}
+            disabled={record.is_admin}
+          >
+            删除
+          </Button>
         </Space>
       )
     }

@@ -302,6 +302,28 @@ class UserManager:
         conn.commit()
         conn.close()
         
+    def delete_user(self, user_id: str) -> bool:
+        """删除用户（仅管理员可用）"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # 检查用户是否存在
+            cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
+            if not cursor.fetchone():
+                return False
+            
+            # 删除用户
+            cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+            conn.commit()
+            return True
+        except Exception as e:
+            import logging
+            logging.error(f"Error deleting user {user_id}: {str(e)}")
+            return False
+        finally:
+            conn.close()
+    
     def validate_email_domain(self, email: str) -> bool:
         """验证邮箱域名是否符合要求"""
         config = self.get_system_config()

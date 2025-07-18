@@ -1083,6 +1083,33 @@ def admin_list_all_tasks():
         return jsonify({'error': str(e)}), 500
 
 
+@api_bp.route('/admin/users/<user_id>', methods=['DELETE'])
+def admin_delete_user(user_id):
+    """删除用户（仅管理员）"""
+    from models.user import UserManager
+    
+    # 检查管理员权限
+    if not session.get('is_admin'):
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    # 防止删除自己
+    if user_id == session.get('user_id'):
+        return jsonify({'error': 'Cannot delete your own account'}), 400
+    
+    user_manager = UserManager()
+    
+    # 检查用户是否存在
+    user = user_manager.get_user_by_id(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # 删除用户
+    if user_manager.delete_user(user_id):
+        return jsonify({'message': f'User {user.email} deleted successfully'}), 200
+    else:
+        return jsonify({'error': 'Failed to delete user'}), 500
+
+
 @api_bp.route('/admin/projects', methods=['GET'])
 def admin_list_all_projects():
     """获取所有用户的项目（管理员）"""

@@ -121,4 +121,11 @@ export const authApi = {
     apiClient.put(`/auth/admin/users/${userId}/claude-token`, { claude_token: claudeToken }),
 }
 
+export const adminApi = {
+  // 管理员API
+  deleteUser: (userId) => apiClient.delete(`/admin/users/${userId}`),
+  getAllTasks: () => apiClient.get('/admin/tasks'),
+  getAllProjects: () => apiClient.get('/admin/projects'),
+}
+
 export default apiClient
