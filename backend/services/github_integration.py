@@ -274,4 +274,3 @@ class GitHubIntegration:
         except Exception as e:
             logger.error(f"Error creating pull request: {str(e)}")
             return None
-EOF < /dev/null
