@@ -32,13 +32,6 @@ apiClient.interceptors.response.use(
   (error) => {
     // 如果是401错误，跳转到登录页
     if (error.response?.status === 401) {
-      window.location.href = '/login'
-    }
-    return Promise.reject(error)
-  }
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
