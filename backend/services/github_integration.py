@@ -100,7 +100,7 @@ class GitHubIntegration:
                 raise ValueError(f"Repository not found: {repo_info['full_name']}")
             elif response.status_code == 401:
                 raise ValueError("GitHub token is invalid or expired")
-            elif response.status_code \!= 200:
+            elif response.status_code != 200:
                 raise ValueError(f"GitHub API error: {response.status_code}")
             
             data = response.json()
