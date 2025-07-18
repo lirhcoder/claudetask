@@ -132,9 +132,6 @@ const TaskFileExplorer = ({ onSelectTask, onExecuteTask }) => {
       
       setTreeData(mockData)
       setExpandedKeys(['/project-alpha']) // 默认展开第一个项目
-      }
-    } catch (error) {
-      message.error('加载任务树失败')
     } finally {
       setLoading(false)
     }
