@@ -7,6 +7,7 @@ from pathlib import Path
 import sqlite3
 import bcrypt
 from typing import Optional, List, Dict
+import logging
 
 class User:
     def __init__(self, id: Optional[str] = None, email: str = "", username: str = "", 
@@ -263,22 +264,59 @@ class UserManager:
         return users
         
     def get_system_config(self) -> SystemConfig:
-        """获取系统配置"""
+        """获取系统配置（兼容新旧两种表结构）"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT allowed_email_domain, require_email_verification, super_admin_email
-            FROM system_config WHERE id = 'system_config'
-        ''')
-        row = cursor.fetchone()
-        conn.close()
         
-        config = SystemConfig()
-        if row:
-            config.allowed_email_domain = row[0]
-            config.require_email_verification = bool(row[1])
-            config.super_admin_email = row[2]
-        return config
+        try:
+            # 检查表是否存在
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='system_config'")
+            if not cursor.fetchone():
+                conn.close()
+                return SystemConfig()  # 返回默认配置
+            
+            # 检查表结构
+            cursor.execute("PRAGMA table_info(system_config)")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            # 新的配置系统（key-value 格式）
+            if 'key' in columns and 'value' in columns:
+                cursor.execute('''
+                    SELECT key, value FROM system_config 
+                    WHERE key IN ('auth.allowed_email_domain', 
+                                  'auth.require_email_verification', 
+                                  'auth.super_admin_email')
+                ''')
+                
+                config_dict = {row[0]: row[1] for row in cursor.fetchall()}
+                config = SystemConfig()
+                config.allowed_email_domain = config_dict.get('auth.allowed_email_domain', '@sparticle.com')
+                config.require_email_verification = config_dict.get('auth.require_email_verification', 'false').lower() == 'true'
+                config.super_admin_email = config_dict.get('auth.super_admin_email', 'admin@sparticle.com')
+                conn.close()
+                return config
+                
+            # 旧的配置系统
+            elif 'allowed_email_domain' in columns:
+                cursor.execute('''
+                    SELECT allowed_email_domain, require_email_verification, super_admin_email
+                    FROM system_config WHERE id = 'system_config'
+                ''')
+                row = cursor.fetchone()
+                conn.close()
+                
+                config = SystemConfig()
+                if row:
+                    config.allowed_email_domain = row[0]
+                    config.require_email_verification = bool(row[1])
+                    config.super_admin_email = row[2]
+                return config
+                
+        except Exception as e:
+            logging.error(f"Error getting system config: {e}")
+            conn.close()
+            
+        return SystemConfig()  # 返回默认配置
         
     def update_system_config(self, config: SystemConfig):
         """更新系统配置"""
