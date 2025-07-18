@@ -88,7 +88,7 @@ const RepositoryPage = () => {
         key={repo.id}
         hoverable
         onClick={() => navigate(`/repository/${repo.id}`)}
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 12 }}
         actions={[
           <Tooltip title="分支">
             <Space>
@@ -142,8 +142,7 @@ const RepositoryPage = () => {
   }
 
   return (
-    <Layout style={{ padding: '24px' }}>
-      <Content>
+    <div>
         {/* 页面标题和操作 */}
         <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0 }}>
@@ -171,7 +170,7 @@ const RepositoryPage = () => {
         </div>
 
         {/* 统计信息 */}
-        <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col span={6}>
             <Card>
               <Statistic
@@ -393,8 +392,7 @@ const RepositoryPage = () => {
             </Form.Item>
           </Form>
         </Modal>
-      </Content>
-    </Layout>
+    </div>
   )
 }
 

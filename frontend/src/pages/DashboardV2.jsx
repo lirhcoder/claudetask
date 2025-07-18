@@ -71,19 +71,18 @@ const DashboardV2 = () => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '100px' }}>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
         <Spin size="large" />
       </div>
     );
   }
 
   return (
-    <Layout style={{ padding: '24px', background: '#f0f2f5' }}>
-      <Content>
-        <h1 style={{ marginBottom: 24 }}>工作台</h1>
+    <div>
+      <h1 style={{ marginBottom: 16 }}>工作台</h1>
 
         {/* 统计卡片 */}
-        <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col span={8}>
             <Card hoverable onClick={() => navigate('/repositories')}>
               <Statistic
@@ -115,7 +114,7 @@ const DashboardV2 = () => {
           </Col>
         </Row>
 
-        <Row gutter={16}>
+        <Row gutter={[16, 16]}>
           {/* 快捷操作 */}
           <Col span={8}>
             <Card title="快捷操作" style={{ height: '100%' }}>
@@ -195,8 +194,7 @@ const DashboardV2 = () => {
             </Card>
           </Col>
         </Row>
-      </Content>
-    </Layout>
+    </div>
   );
 };
 

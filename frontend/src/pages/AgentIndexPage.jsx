@@ -214,7 +214,7 @@ const AgentIndexPage = () => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '100px' }}>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
         <Spin size="large" />
       </div>
     );
@@ -224,14 +224,13 @@ const AgentIndexPage = () => {
   const monthlyRankings = myMetrics?.monthly_rankings || [];
 
   return (
-    <Layout style={{ padding: '24px' }}>
-      <Content>
-        <h1 style={{ marginBottom: 24 }}>
+    <div>
+      <h1 style={{ marginBottom: 16 }}>
           <ThunderboltOutlined /> Agent 员工指数
         </h1>
 
         {/* 个人指标卡片 */}
-        <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col span={6}>
             <Card>
               <Statistic
@@ -357,8 +356,7 @@ const AgentIndexPage = () => {
             )}
           </Tabs>
         </Card>
-      </Content>
-    </Layout>
+    </div>
   );
 };
 

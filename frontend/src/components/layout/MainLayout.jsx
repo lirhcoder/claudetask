@@ -179,11 +179,12 @@ const MainLayout = () => {
         </Header>
         <Content
           style={{
-            margin: '24px 16px',
-            padding: 24,
-            minHeight: 280,
+            margin: '16px',
+            padding: 16,
+            minHeight: 'calc(100vh - 96px)',
             background: isDarkMode ? '#141414' : '#fff',
             borderRadius: 8,
+            overflow: 'auto',
           }}
         >
           <Outlet />
