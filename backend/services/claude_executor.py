@@ -102,7 +102,7 @@ class ClaudeExecutor:
         
         logger.info(f"Starting task {task.id}")
         task.status = 'running'
-        task.started_at = datetime.utcnow()
+        task.started_at = datetime.now()
         self.task_manager.update_task(task)
         
         try:
@@ -231,7 +231,7 @@ class ClaudeExecutor:
             
             # 计算执行时间
             if task.started_at:
-                task.execution_time = (datetime.utcnow() - task.started_at).total_seconds()
+                task.execution_time = (datetime.now() - task.started_at).total_seconds()
             
             # 保存最终状态
             self.task_manager.update_task(task)
