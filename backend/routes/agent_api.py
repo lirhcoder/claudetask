@@ -6,8 +6,8 @@ from functools import wraps
 from datetime import datetime
 import logging
 
-from ..models.agent_metrics import AgentMetricsManager, AgentMetricsDB
-from ..models.user import UserManager
+from models.agent_metrics import AgentMetricsManager, AgentMetricsDB
+from models.user import UserManager
 
 agent_bp = Blueprint('agent', __name__)
 

@@ -10,13 +10,13 @@ import os
 import json
 from pathlib import Path
 
-from ..models.project import ProjectManager
-from ..models.task import TaskManager  
-from ..models.repository import RepositoryManager
-from ..models.branch import BranchManager
-from ..executors.factory import ExecutorFactory
-from ..models.config import ConfigManager
-from ..models.agent_metrics import AgentMetricsManager
+from models.project import ProjectManager
+from models.task import TaskManager  
+from models.repository import RepositoryManager
+from models.branch import BranchManager
+from executors.factory import ExecutorFactory
+from models.config import ConfigManager
+from models.agent_metrics import AgentMetricsManager
 
 unified_bp = Blueprint('unified', __name__)
 
@@ -328,5 +328,8 @@ def init_app(app):
     
     # 添加兼容性支持
     if Path('migration_config.json').exists():
-        from ..compatibility import init_compatibility
-        init_compatibility(app)
+        try:
+            from compatibility import init_compatibility
+            init_compatibility(app)
+        except ImportError:
+            pass
