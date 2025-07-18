@@ -345,20 +345,35 @@ def list_tasks():
         
         # 获取当前用户ID
         user_id = session.get('user_id')
+        is_admin = session.get('is_admin', False)
         
         # 获取用户管理器以添加邮箱信息
         from models.user import UserManager
         user_manager = UserManager()
+        
+        # 调试日志
+        import logging
+        logging.info(f"list_tasks: Current user_id = {user_id}, is_admin = {is_admin}")
         
         # Convert to dict and sort by created_at
         task_list = []
         for task in tasks:
             try:
                 task_dict = task.to_dict()
-                # 如果有用户登录，只显示该用户的任务
-                if user_id and hasattr(task, 'user_id'):
-                    if task.user_id != user_id:
+                # 如果有用户登录，只显示该用户的任务（管理员可以看到所有任务）
+                if user_id and not is_admin:
+                    # 检查task对象和task_dict中的user_id
+                    task_user_id = getattr(task, 'user_id', None) or task_dict.get('user_id')
+                    
+                    # 调试：记录前几个任务的user_id情况
+                    if len(task_list) < 3:
+                        logging.info(f"Task {task_dict.get('id')[:8]}: task.user_id={getattr(task, 'user_id', 'N/A')}, dict.user_id={task_dict.get('user_id', 'N/A')}, current_user={user_id}")
+                    
+                    if task_user_id and task_user_id != user_id:
                         continue
+                    elif not task_user_id:
+                        # 如果任务没有user_id，也显示给当前用户（向后兼容）
+                        logging.debug(f"Task {task_dict.get('id')} has no user_id, showing to current user")
                 
                 # 添加用户邮箱信息
                 if task_dict.get('user_id'):
