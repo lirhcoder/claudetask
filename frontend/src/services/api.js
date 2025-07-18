@@ -126,6 +126,15 @@ export const taskFileSystemApi = {
     apiClient.get('/taskfs/search', { params: { q: query, path } }),
 }
 
+// Agent 员工指数 API
+export const agentApi = {
+  getMyMetrics: () => apiClient.get('/agent/metrics'),
+  getRankings: (period = 'monthly') => apiClient.get(`/agent/rankings?period=${period}`),
+  getUserHistory: (userId, months = 6) => apiClient.get(`/agent/history/${userId}?months=${months}`),
+  getCompanyStats: () => apiClient.get('/agent/company-stats'),
+  updateMetrics: () => apiClient.post('/agent/update-metrics')
+}
+
 export const authApi = {
   // 认证相关
   login: (data) => apiClient.post('/auth/login', data),

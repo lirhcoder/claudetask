@@ -17,6 +17,7 @@ import {
   FolderOpenOutlined,
   FileTextOutlined,
   GithubOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -66,6 +67,11 @@ const MainLayout = () => {
       key: '/repositories',
       icon: <GithubOutlined />,
       label: '仓库',
+    },
+    {
+      key: '/agent-index',
+      icon: <ThunderboltOutlined />,
+      label: '员工指数',
     },
     {
       key: '/settings',

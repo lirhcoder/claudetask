@@ -10,6 +10,7 @@ import TaskWorkspace from './pages/TaskWorkspace'
 import RepositoryPage from './pages/RepositoryPage'
 import RepositoryDetailPage from './pages/RepositoryDetailPage'
 import RepositoryDetailPageV2 from './pages/RepositoryDetailPageV2'
+import AgentIndexPage from './pages/AgentIndexPage'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
@@ -39,6 +40,7 @@ function App() {
               <Route path="workspace/*" element={<TaskWorkspace />} />
               <Route path="repositories" element={<RepositoryPage />} />
               <Route path="repository/:id" element={<RepositoryDetailPageV2 />} />
+              <Route path="agent-index" element={<AgentIndexPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminPage />} />
             </Route>

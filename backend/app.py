@@ -32,6 +32,7 @@ def create_app(config_name=None):
     from routes.webhook_api import webhook_bp
     from routes.config_api import config_bp
     from routes.websocket import register_socketio_handlers
+    from routes.agent_api import agent_bp
     
     # 注册统一 API V2
     try:
@@ -46,6 +47,7 @@ def create_app(config_name=None):
     app.register_blueprint(repo_bp, url_prefix='/api')
     app.register_blueprint(webhook_bp, url_prefix='/api/webhooks')
     app.register_blueprint(config_bp, url_prefix='/api')
+    app.register_blueprint(agent_bp)
     register_socketio_handlers(socketio)
     
     # 初始化兼容性支持

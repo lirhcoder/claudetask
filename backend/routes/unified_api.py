@@ -16,6 +16,7 @@ from ..models.repository import RepositoryManager
 from ..models.branch import BranchManager
 from ..executors.factory import ExecutorFactory
 from ..models.config import ConfigManager
+from ..models.agent_metrics import AgentMetricsManager
 
 unified_bp = Blueprint('unified', __name__)
 
@@ -35,6 +36,7 @@ class UnifiedWorkflow:
         self.branch_manager = BranchManager()
         self.executor_factory = ExecutorFactory()
         self.config_manager = ConfigManager()
+        self.metrics_manager = AgentMetricsManager()
         
     def create_and_execute(self, repo_id, task_data, user_id):
         """一键创建分支并执行任务"""
@@ -77,11 +79,18 @@ class UnifiedWorkflow:
             # 更新分支状态为执行中
             self.branch_manager.update_branch_status(branch['id'], 'in_progress')
             
+            # 记录执行开始时间
+            import time
+            start_time = time.time()
+            
             # 执行
             result = executor.execute(
                 prompt=execution_config['prompt'],
                 files=execution_config['files']
             )
+            
+            # 计算执行时间
+            execution_time = time.time() - start_time
             
             # 5. 处理执行结果
             if result.get('status') == 'success':
@@ -101,6 +110,9 @@ class UnifiedWorkflow:
                 if execution_config['auto_pr']:
                     pr_result = self._create_pull_request(repo, branch, task_data)
                     result['pull_request'] = pr_result
+                
+                # 更新Agent指标
+                self.metrics_manager.update_task_metrics(user_id, execution_time)
                 
             else:
                 self.branch_manager.update_branch_status(branch['id'], 'failed')

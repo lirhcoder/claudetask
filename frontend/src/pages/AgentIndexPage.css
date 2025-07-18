@@ -1,0 +1,17 @@
+.highlight-row {
+  background-color: #e6f7ff !important;
+  font-weight: 500;
+}
+
+.highlight-row:hover {
+  background-color: #bae7ff !important;
+}
+
+/* Dark mode support */
+.ant-theme-dark .highlight-row {
+  background-color: #1d3a4f !important;
+}
+
+.ant-theme-dark .highlight-row:hover {
+  background-color: #24475e !important;
+}
