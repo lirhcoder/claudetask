@@ -128,6 +128,17 @@ export const adminApi = {
   getAllProjects: () => apiClient.get('/admin/projects'),
 }
 
+export const configApi = {
+  // 配置管理
+  getConfigs: (category) => apiClient.get('/configs', { params: { category } }),
+  getConfig: (key) => apiClient.get(`/configs/${key}`),
+  updateConfigs: (configs) => apiClient.put('/configs', { configs }),
+  updateConfig: (key, value) => apiClient.put(`/configs/${key}`, { value }),
+  deleteConfig: (key) => apiClient.delete(`/configs/${key}`),
+  resetConfigs: () => apiClient.post('/configs/reset'),
+  exportConfigs: () => apiClient.get('/configs/export'),
+}
+
 export const repositoryApi = {
   // 仓库管理
   listRepositories: () => apiClient.get('/repos'),

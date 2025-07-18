@@ -1,6 +1,7 @@
 """
 GitHub Webhook 处理服务
 """
+import os
 import hmac
 import hashlib
 import json
@@ -15,7 +16,16 @@ class GitHubWebhookHandler:
     """处理 GitHub Webhook 事件"""
     
     def __init__(self, webhook_secret: Optional[str] = None):
-        self.webhook_secret = webhook_secret
+        # 优先使用传入的密钥，其次从配置系统，最后从环境变量
+        if not webhook_secret:
+            try:
+                from models.config import ConfigManager
+                config_manager = ConfigManager()
+                webhook_secret = config_manager.get_config('github.webhook_secret')
+            except:
+                pass
+        
+        self.webhook_secret = webhook_secret or os.getenv('GITHUB_WEBHOOK_SECRET')
         self.event_handlers = {
             'push': self.handle_push,
             'pull_request': self.handle_pull_request,

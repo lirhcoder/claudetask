@@ -15,6 +15,15 @@ class GitHubIntegration:
     """GitHub API 集成"""
     
     def __init__(self, access_token: Optional[str] = None):
+        # 优先使用传入的 token，其次从配置系统，最后从环境变量
+        if not access_token:
+            try:
+                from models.config import ConfigManager
+                config_manager = ConfigManager()
+                access_token = config_manager.get_config('github.access_token')
+            except:
+                pass
+        
         self.access_token = access_token or os.getenv('GITHUB_ACCESS_TOKEN')
         self.api_base = 'https://api.github.com'
         self.headers = {
