@@ -1,301 +1,277 @@
 """
-GitHub API 集成服务
+GitHub 集成服务
 """
 import os
+import re
 import json
+import subprocess
 import logging
 from typing import Dict, List, Optional
+from urllib.parse import urlparse
 import requests
-from datetime import datetime
+
+from models.config import ConfigManager
 
 logger = logging.getLogger(__name__)
 
-
 class GitHubIntegration:
-    """GitHub API 集成"""
+    """GitHub 集成类"""
     
-    def __init__(self, access_token: Optional[str] = None):
-        # 优先使用传入的 token，其次从配置系统，最后从环境变量
-        if not access_token:
-            try:
-                from models.config import ConfigManager
-                config_manager = ConfigManager()
-                access_token = config_manager.get_config('github.access_token')
-            except:
-                pass
-        
-        self.access_token = access_token or os.getenv('GITHUB_ACCESS_TOKEN')
-        self.api_base = 'https://api.github.com'
+    def __init__(self):
+        self.config_manager = ConfigManager()
+        self.token = self._get_github_token()
         self.headers = {
-            'Accept': 'application/vnd.github.v3+json',
-        }
-        if self.access_token:
-            self.headers['Authorization'] = f'token {self.access_token}'
+            'Authorization': f'token {self.token}',
+            'Accept': 'application/vnd.github.v3+json'
+        } if self.token else {}
+        self.api_base = 'https://api.github.com'
+    
+    def _get_github_token(self) -> Optional[str]:
+        """获取 GitHub Token"""
+        # 优先从配置管理器获取
+        token = self.config_manager.get_config('github.token')
+        if token:
+            return token
+            
+        # 其次从环境变量获取
+        return os.environ.get('GITHUB_TOKEN')
+    
+    def parse_github_url(self, url: str) -> Dict[str, str]:
+        """解析 GitHub URL
+        
+        支持格式：
+        - https://github.com/owner/repo
+        - https://github.com/owner/repo.git
+        - git@github.com:owner/repo.git
+        - owner/repo
+        """
+        # 移除 .git 后缀
+        url = url.rstrip('.git')
+        
+        # 处理 SSH 格式
+        if url.startswith('git@github.com:'):
+            url = url.replace('git@github.com:', 'https://github.com/')
+        
+        # 处理简短格式 owner/repo
+        if '/' in url and not url.startswith('http'):
+            parts = url.split('/')
+            if len(parts) == 2:
+                return {
+                    'owner': parts[0],
+                    'repo': parts[1],
+                    'full_name': url
+                }
+        
+        # 解析 HTTPS URL
+        if url.startswith('https://github.com/'):
+            path = url.replace('https://github.com/', '')
+            parts = path.split('/')
+            if len(parts) >= 2:
+                return {
+                    'owner': parts[0],
+                    'repo': parts[1],
+                    'full_name': f"{parts[0]}/{parts[1]}"
+                }
+        
+        raise ValueError(f"Invalid GitHub URL format: {url}")
     
     def import_repository(self, github_url: str) -> Dict:
         """从 GitHub 导入仓库信息"""
-        # 解析 GitHub URL
-        # https://github.com/owner/repo -> owner, repo
-        parts = github_url.rstrip('/').split('/')
-        if len(parts) < 2:
-            raise ValueError("Invalid GitHub URL")
-        
-        owner = parts[-2]
-        repo_name = parts[-1].replace('.git', '')
-        
-        # 获取仓库信息
-        repo_info = self.get_repository_info(owner, repo_name)
-        
-        return {
-            'name': repo_info['name'],
-            'description': repo_info['description'] or '',
-            'is_private': repo_info['private'],
-            'default_branch': repo_info['default_branch'],
-            'github_url': repo_info['html_url'],
-            'stars': repo_info['stargazers_count'],
-            'forks': repo_info['forks_count'],
-            'open_issues': repo_info['open_issues_count'],
-            'language': repo_info['language'],
-            'created_at': repo_info['created_at'],
-            'updated_at': repo_info['updated_at']
-        }
-    
-    def get_repository_info(self, owner: str, repo: str) -> Dict:
-        """获取仓库信息"""
-        url = f"{self.api_base}/repos/{owner}/{repo}"
-        response = requests.get(url, headers=self.headers)
-        
-        if response.status_code == 404:
-            raise ValueError(f"Repository {owner}/{repo} not found")
-        elif response.status_code == 401:
-            raise ValueError("GitHub authentication failed")
-        elif response.status_code != 200:
-            raise ValueError(f"GitHub API error: {response.status_code}")
-        
-        return response.json()
-    
-    def list_branches(self, owner: str, repo: str) -> List[Dict]:
-        """列出仓库的所有分支"""
-        url = f"{self.api_base}/repos/{owner}/{repo}/branches"
-        response = requests.get(url, headers=self.headers)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Failed to list branches: {response.status_code}")
-            return []
-    
-    def create_branch(self, owner: str, repo: str, branch_name: str, 
-                     base_branch: str = 'main') -> bool:
-        """创建新分支"""
-        # 首先获取基础分支的 SHA
-        base_ref = self.get_branch_ref(owner, repo, base_branch)
-        if not base_ref:
-            return False
-        
-        # 创建新分支
-        url = f"{self.api_base}/repos/{owner}/{repo}/git/refs"
-        data = {
-            'ref': f'refs/heads/{branch_name}',
-            'sha': base_ref['object']['sha']
-        }
-        
-        response = requests.post(url, json=data, headers=self.headers)
-        return response.status_code == 201
-    
-    def get_branch_ref(self, owner: str, repo: str, branch: str) -> Optional[Dict]:
-        """获取分支引用"""
-        url = f"{self.api_base}/repos/{owner}/{repo}/git/refs/heads/{branch}"
-        response = requests.get(url, headers=self.headers)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Failed to get branch ref: {response.status_code}")
-            return None
-    
-    def list_issues(self, owner: str, repo: str, state: str = 'open') -> List[Dict]:
-        """列出议题"""
-        url = f"{self.api_base}/repos/{owner}/{repo}/issues"
-        params = {'state': state}
-        response = requests.get(url, params=params, headers=self.headers)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Failed to list issues: {response.status_code}")
-            return []
-    
-    def create_issue(self, owner: str, repo: str, title: str, 
-                    body: str = '', labels: List[str] = None) -> Optional[Dict]:
-        """创建议题"""
-        url = f"{self.api_base}/repos/{owner}/{repo}/issues"
-        data = {
-            'title': title,
-            'body': body,
-        }
-        if labels:
-            data['labels'] = labels
-        
-        response = requests.post(url, json=data, headers=self.headers)
-        
-        if response.status_code == 201:
-            return response.json()
-        else:
-            logger.error(f"Failed to create issue: {response.status_code}")
-            return None
-    
-    def create_pull_request(self, owner: str, repo: str, title: str,
-                          head: str, base: str = 'main', body: str = '') -> Optional[Dict]:
-        """创建 Pull Request"""
-        url = f"{self.api_base}/repos/{owner}/{repo}/pulls"
-        data = {
-            'title': title,
-            'head': head,
-            'base': base,
-            'body': body,
-        }
-        
-        response = requests.post(url, json=data, headers=self.headers)
-        
-        if response.status_code == 201:
-            return response.json()
-        else:
-            logger.error(f"Failed to create pull request: {response.status_code}")
-            return None
-    
-    def sync_repository_stats(self, owner: str, repo: str) -> Dict:
-        """同步仓库统计信息"""
-        repo_info = self.get_repository_info(owner, repo)
-        
-        # 获取最新的提交
-        commits_url = f"{self.api_base}/repos/{owner}/{repo}/commits"
-        commits_response = requests.get(commits_url, params={'per_page': 1}, 
-                                       headers=self.headers)
-        
-        latest_commit = None
-        if commits_response.status_code == 200:
-            commits = commits_response.json()
-            if commits:
-                latest_commit = commits[0]
-        
-        return {
-            'stars': repo_info['stargazers_count'],
-            'forks': repo_info['forks_count'],
-            'open_issues': repo_info['open_issues_count'],
-            'watchers': repo_info['watchers_count'],
-            'size': repo_info['size'],
-            'latest_commit': latest_commit,
-            'updated_at': repo_info['updated_at'],
-            'pushed_at': repo_info['pushed_at']
-        }
+        try:
+            # 解析 URL
+            repo_info = self.parse_github_url(github_url)
+            
+            # 如果没有 token，返回基本信息
+            if not self.token:
+                return {
+                    'name': repo_info['repo'],
+                    'organization': repo_info['owner'],
+                    'description': '',
+                    'is_private': False,
+                    'github_url': f"https://github.com/{repo_info['full_name']}",
+                    'default_branch': 'main'
+                }
+            
+            # 调用 GitHub API 获取详细信息
+            api_url = f"{self.api_base}/repos/{repo_info['full_name']}"
+            response = requests.get(api_url, headers=self.headers)
+            
+            if response.status_code == 404:
+                raise ValueError(f"Repository not found: {repo_info['full_name']}")
+            elif response.status_code == 401:
+                raise ValueError("GitHub token is invalid or expired")
+            elif response.status_code \!= 200:
+                raise ValueError(f"GitHub API error: {response.status_code}")
+            
+            data = response.json()
+            
+            return {
+                'name': data['name'],
+                'organization': data['owner']['login'],
+                'description': data.get('description', ''),
+                'is_private': data.get('private', False),
+                'github_url': data['html_url'],
+                'default_branch': data.get('default_branch', 'main'),
+                'language': data.get('language'),
+                'stars': data.get('stargazers_count', 0),
+                'forks': data.get('forks_count', 0)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error importing repository: {str(e)}")
+            raise
     
     def clone_repository(self, github_url: str, local_path: str) -> bool:
         """克隆仓库到本地"""
-        import subprocess
-        
         try:
-            # 如果提供了 token，使用认证的 URL
-            if self.access_token and github_url.startswith('https://'):
-                # 插入 token 到 URL 中
-                auth_url = github_url.replace('https://', f'https://{self.access_token}@')
-                subprocess.run(['git', 'clone', auth_url, local_path], 
-                             check=True, capture_output=True)
+            # 确保父目录存在
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            
+            # 如果目录已存在，先删除
+            if os.path.exists(local_path):
+                import shutil
+                shutil.rmtree(local_path)
+            
+            # 构建克隆命令
+            clone_url = github_url
+            if self.token and github_url.startswith('https://'):
+                # 添加 token 到 URL 中进行认证
+                clone_url = github_url.replace('https://', f'https://{self.token}@')
+            
+            # 执行克隆
+            cmd = ['git', 'clone', clone_url, local_path]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode \!= 0:
+                logger.error(f"Git clone failed: {result.stderr}")
+                return False
+            
+            logger.info(f"Successfully cloned repository to {local_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error cloning repository: {str(e)}")
+            return False
+    
+    def list_branches(self, owner: str, repo: str) -> List[Dict]:
+        """列出仓库的所有分支"""
+        if not self.token:
+            return []
+            
+        try:
+            api_url = f"{self.api_base}/repos/{owner}/{repo}/branches"
+            response = requests.get(api_url, headers=self.headers)
+            
+            if response.status_code == 200:
+                return response.json()
             else:
-                subprocess.run(['git', 'clone', github_url, local_path], 
-                             check=True, capture_output=True)
-            return True
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to clone repository: {e}")
-            return False
-    
-    def push_changes(self, local_path: str, branch: str = 'main', 
-                    message: str = 'Update from ClaudeTask') -> bool:
-        """推送本地更改到 GitHub"""
-        import subprocess
-        
-        try:
-            # 添加所有更改
-            subprocess.run(['git', 'add', '.'], cwd=local_path, check=True)
-            
-            # 提交更改
-            subprocess.run(['git', 'commit', '-m', message], 
-                         cwd=local_path, check=True)
-            
-            # 推送到远程
-            subprocess.run(['git', 'push', 'origin', branch], 
-                         cwd=local_path, check=True)
-            return True
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to push changes: {e}")
-            return False
-    
-    def create_webhook(self, owner: str, repo: str, webhook_url: str, 
-                      events: List[str] = None, secret: Optional[str] = None) -> Optional[Dict]:
-        """创建 GitHub Webhook"""
-        if events is None:
-            events = ['push', 'pull_request', 'issues', 'issue_comment', 
-                     'create', 'delete', 'release']
-        
-        url = f"{self.api_base}/repos/{owner}/{repo}/hooks"
-        
-        config = {
-            'url': webhook_url,
-            'content_type': 'json',
-            'insecure_ssl': '0'
-        }
-        
-        if secret:
-            config['secret'] = secret
-        
-        data = {
-            'name': 'web',
-            'active': True,
-            'events': events,
-            'config': config
-        }
-        
-        response = requests.post(url, json=data, headers=self.headers)
-        
-        if response.status_code == 201:
-            webhook = response.json()
-            logger.info(f"Created webhook for {owner}/{repo}")
-            return webhook
-        else:
-            logger.error(f"Failed to create webhook: {response.status_code} - {response.text}")
-            return None
-    
-    def list_webhooks(self, owner: str, repo: str) -> List[Dict]:
-        """列出仓库的 Webhooks"""
-        url = f"{self.api_base}/repos/{owner}/{repo}/hooks"
-        response = requests.get(url, headers=self.headers)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Failed to list webhooks: {response.status_code}")
+                logger.error(f"Failed to list branches: {response.status_code}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error listing branches: {str(e)}")
             return []
     
-    def delete_webhook(self, owner: str, repo: str, hook_id: int) -> bool:
-        """删除 Webhook"""
-        url = f"{self.api_base}/repos/{owner}/{repo}/hooks/{hook_id}"
-        response = requests.delete(url, headers=self.headers)
-        
-        if response.status_code == 204:
-            logger.info(f"Deleted webhook {hook_id} for {owner}/{repo}")
+    def list_issues(self, owner: str, repo: str, state: str = 'open') -> List[Dict]:
+        """列出仓库的 Issues"""
+        if not self.token:
+            return []
+            
+        try:
+            api_url = f"{self.api_base}/repos/{owner}/{repo}/issues"
+            params = {'state': state}
+            response = requests.get(api_url, headers=self.headers, params=params)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Failed to list issues: {response.status_code}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error listing issues: {str(e)}")
+            return []
+    
+    def create_webhook(self, owner: str, repo: str, webhook_url: str, secret: str) -> Optional[Dict]:
+        """创建 Webhook"""
+        if not self.token:
+            logger.warning("No GitHub token available for creating webhook")
+            return None
+            
+        try:
+            api_url = f"{self.api_base}/repos/{owner}/{repo}/hooks"
+            
+            config = {
+                'url': webhook_url,
+                'content_type': 'json',
+                'secret': secret
+            }
+            
+            data = {
+                'name': 'web',
+                'active': True,
+                'events': ['push', 'pull_request', 'issues', 'issue_comment'],
+                'config': config
+            }
+            
+            response = requests.post(api_url, headers=self.headers, json=data)
+            
+            if response.status_code == 201:
+                logger.info(f"Webhook created successfully for {owner}/{repo}")
+                return response.json()
+            else:
+                logger.error(f"Failed to create webhook: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error creating webhook: {str(e)}")
+            return None
+    
+    def sync_repository(self, local_path: str) -> bool:
+        """同步本地仓库与远程仓库"""
+        try:
+            # 拉取最新代码
+            cmd = ['git', 'pull', 'origin']
+            result = subprocess.run(cmd, cwd=local_path, capture_output=True, text=True)
+            
+            if result.returncode \!= 0:
+                logger.error(f"Git pull failed: {result.stderr}")
+                return False
+            
+            logger.info(f"Successfully synced repository at {local_path}")
             return True
-        else:
-            logger.error(f"Failed to delete webhook: {response.status_code}")
+            
+        except Exception as e:
+            logger.error(f"Error syncing repository: {str(e)}")
             return False
     
-    def test_webhook(self, owner: str, repo: str, hook_id: int) -> bool:
-        """测试 Webhook"""
-        url = f"{self.api_base}/repos/{owner}/{repo}/hooks/{hook_id}/tests"
-        response = requests.post(url, headers=self.headers)
-        
-        if response.status_code == 204:
-            logger.info(f"Triggered test for webhook {hook_id}")
-            return True
-        else:
-            logger.error(f"Failed to test webhook: {response.status_code}")
-            return False
+    def create_pull_request(self, owner: str, repo: str, title: str, body: str, 
+                          head: str, base: str = 'main') -> Optional[Dict]:
+        """创建 Pull Request"""
+        if not self.token:
+            logger.warning("No GitHub token available for creating PR")
+            return None
+            
+        try:
+            api_url = f"{self.api_base}/repos/{owner}/{repo}/pulls"
+            
+            data = {
+                'title': title,
+                'body': body,
+                'head': head,
+                'base': base
+            }
+            
+            response = requests.post(api_url, headers=self.headers, json=data)
+            
+            if response.status_code == 201:
+                logger.info(f"Pull request created successfully")
+                return response.json()
+            else:
+                logger.error(f"Failed to create PR: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error creating pull request: {str(e)}")
+            return None
+EOF < /dev/null
