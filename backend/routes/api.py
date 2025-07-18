@@ -667,6 +667,16 @@ def update_local_result(task_id):
         # 保存更新
         task_manager.update_task(task)
         
+        # 更新Agent指标（如果任务成功完成）
+        if task.status == 'completed' and task.execution_time and hasattr(task, 'user_id') and task.user_id:
+            try:
+                from models.agent_metrics import AgentMetricsManager
+                metrics_manager = AgentMetricsManager()
+                metrics_manager.update_task_metrics(task.user_id, task.execution_time)
+            except Exception as e:
+                import logging
+                logging.error(f"Failed to update agent metrics: {str(e)}")
+        
         # 如果有 WebSocket 连接，通知前端
         from app import socketio
         socketio.emit('task_update', {
@@ -805,6 +815,39 @@ def execute_local():
         logging.error(f"Error creating local task: {str(e)}")
         logging.error(traceback.format_exc())
         return jsonify({'error': f'Failed to create task: {str(e)}'}), 500
+
+
+@api_bp.route('/metrics/agent', methods=['GET'])
+def get_agent_metrics():
+    """获取当前用户的Agent指标"""
+    from models.agent_metrics import AgentMetricsManager
+    from models.user import UserManager
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        metrics_manager = AgentMetricsManager()
+        user_manager = UserManager()
+        
+        # 获取仪表板指标
+        dashboard_data = metrics_manager.get_dashboard_metrics(user_id)
+        
+        # 为排行榜添加用户邮箱信息
+        for ranking in dashboard_data['monthly_rankings']:
+            user = user_manager.get_user_by_id(ranking['user_id'])
+            if user:
+                ranking['user_email'] = user.email
+            else:
+                ranking['user_email'] = 'unknown@example.com'
+        
+        return jsonify(dashboard_data), 200
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Error getting agent metrics: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 # 管理员端点

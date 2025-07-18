@@ -215,6 +215,16 @@ class ClaudeExecutor:
         finally:
             task.completed_at = datetime.utcnow()
             self.task_manager.update_task(task)
+            
+            # 更新Agent指标（如果任务成功完成）
+            if task.status == 'completed' and task.execution_time and hasattr(task, 'user_id') and task.user_id:
+                try:
+                    from models.agent_metrics import AgentMetricsManager
+                    metrics_manager = AgentMetricsManager()
+                    metrics_manager.update_task_metrics(task.user_id, task.execution_time)
+                except Exception as e:
+                    logger.error(f"Failed to update agent metrics: {str(e)}")
+            
             if hasattr(task, 'completion_callback') and task.completion_callback:
                 task.completion_callback(task)
             

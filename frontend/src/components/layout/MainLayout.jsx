@@ -13,6 +13,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   CrownOutlined,
+  FolderOutlined,
 } from '@ant-design/icons'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -57,6 +58,11 @@ const MainLayout = () => {
       key: '/',
       icon: <DashboardOutlined />,
       label: 'Dashboard',
+    },
+    {
+      key: '/projects',
+      icon: <FolderOutlined />,
+      label: 'Projects',
     },
     {
       key: '/tasks',

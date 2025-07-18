@@ -82,3 +82,33 @@
 .dashboard-container::-webkit-scrollbar-thumb:hover {
   background: #bfbfbf;
 }
+
+/* Agent指标相关样式 */
+.highlight-row {
+  background-color: #e6f7ff !important;
+}
+
+.highlight-row:hover {
+  background-color: #bae7ff !important;
+}
+
+/* 进度条样式优化 */
+.ant-progress-text {
+  font-weight: 600;
+}
+
+/* 统计数字样式 */
+.ant-statistic-content {
+  font-weight: 600;
+}
+
+/* 快速操作卡片样式 */
+.ant-card-hoverable {
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.ant-card-hoverable:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}

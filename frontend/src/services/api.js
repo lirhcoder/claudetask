@@ -73,6 +73,8 @@ export const taskApi = {
   launchLocalExecution: (taskId) => apiClient.post(`/tasks/${taskId}/launch-local`),
   executeLocal: (prompt, projectPath) => 
     apiClient.post('/execute-local', { prompt, project_path: projectPath }),
+  // Agent指标相关
+  getAgentMetrics: () => apiClient.get('/metrics/agent'),
 }
 
 export const authApi = {

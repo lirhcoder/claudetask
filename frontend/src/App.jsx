@@ -4,6 +4,7 @@ import { ConfigProvider, theme, App as AntdApp } from 'antd'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard'
 import ProjectPage from './pages/ProjectPage'
+import ProjectsPage from './pages/ProjectsPage'
 import TasksPage from './pages/TasksPage'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
@@ -28,6 +29,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path="projects" element={<ProjectsPage />} />
               <Route path="project/:projectName" element={<ProjectPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="settings" element={<SettingsPage />} />
