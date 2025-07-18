@@ -16,6 +16,7 @@ import {
   FolderOutlined,
   FolderOpenOutlined,
   FileTextOutlined,
+  GithubOutlined,
 } from '@ant-design/icons'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -60,6 +61,11 @@ const MainLayout = () => {
       key: '/',
       icon: <DashboardOutlined />,
       label: 'Dashboard',
+    },
+    {
+      key: '/repositories',
+      icon: <GithubOutlined />,
+      label: '仓库管理',
     },
     {
       key: '/projects',

@@ -7,6 +7,7 @@ import ProjectPage from './pages/ProjectPage'
 import ProjectsPage from './pages/ProjectsPage'
 import TasksPage from './pages/TasksPage'
 import TaskWorkspace from './pages/TaskWorkspace'
+import RepositoryPage from './pages/RepositoryPage'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
@@ -34,6 +35,8 @@ function App() {
               <Route path="project/:projectName" element={<ProjectPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="workspace/*" element={<TaskWorkspace />} />
+              <Route path="repositories" element={<RepositoryPage />} />
+              <Route path="repository/:id" element={<RepositoryPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminPage />} />
             </Route>

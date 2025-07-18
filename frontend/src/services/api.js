@@ -128,4 +128,29 @@ export const adminApi = {
   getAllProjects: () => apiClient.get('/admin/projects'),
 }
 
+export const repositoryApi = {
+  // 仓库管理
+  listRepositories: () => apiClient.get('/repos'),
+  createRepository: (data) => apiClient.post('/repos', data),
+  getRepository: (repoId) => apiClient.get(`/repos/${repoId}`),
+  updateRepository: (repoId, data) => apiClient.put(`/repos/${repoId}`, data),
+  deleteRepository: (repoId) => apiClient.delete(`/repos/${repoId}`),
+  
+  // 分支管理
+  createBranch: (repoId, data) => apiClient.post(`/repos/${repoId}/branches`, data),
+  listBranches: (repoId) => apiClient.get(`/repos/${repoId}/branches`),
+  executeBranch: (branchId) => apiClient.post(`/branches/${branchId}/execute`),
+  
+  // 议题管理
+  createIssue: (repoId, data) => apiClient.post(`/repos/${repoId}/issues`, data),
+  listIssues: (repoId) => apiClient.get(`/repos/${repoId}/issues`),
+  updateIssue: (issueId, data) => apiClient.put(`/issues/${issueId}`, data),
+  
+  // Git 操作
+  commitChanges: (repoId, data) => apiClient.post(`/repos/${repoId}/commit`, data),
+  pushToRemote: (repoId) => apiClient.post(`/repos/${repoId}/push`),
+  pullFromRemote: (repoId) => apiClient.post(`/repos/${repoId}/pull`),
+  createPullRequest: (branchId, data) => apiClient.post(`/branches/${branchId}/pr`, data),
+}
+
 export default apiClient
