@@ -112,10 +112,13 @@ def execute_claude():
     
     # Execute task with user_id
     executor = get_executor()
+    user_id_from_session = session.get('user_id')
+    logger.info(f"Execute endpoint - session user_id: {user_id_from_session}, is_admin: {session.get('is_admin', False)}")
+    
     task_id = executor.execute(
         prompt=prompt,
         project_path=project_path,
-        user_id=session.get('user_id')
+        user_id=user_id_from_session
     )
     
     return jsonify({
@@ -369,11 +372,32 @@ def list_tasks():
                     if len(task_list) < 3:
                         logging.info(f"Task {task_dict.get('id')[:8]}: task.user_id={getattr(task, 'user_id', 'N/A')}, dict.user_id={task_dict.get('user_id', 'N/A')}, current_user={user_id}")
                     
+                    # 如果任务有明确的user_id且不是当前用户，则过滤掉
                     if task_user_id and task_user_id != user_id:
                         continue
-                    elif not task_user_id:
-                        # 如果任务没有user_id，也显示给当前用户（向后兼容）
-                        logging.debug(f"Task {task_dict.get('id')} has no user_id, showing to current user")
+                    
+                    # 如果任务没有user_id，检查是否可以通过邮箱匹配
+                    if not task_user_id:
+                        # 获取当前用户的邮箱
+                        current_user = user_manager.get_user_by_id(user_id)
+                        if current_user:
+                            # 尝试从项目路径推断用户
+                            from utils.user_inference import infer_user_from_project_path, construct_email
+                            user_info = infer_user_from_project_path(task_dict.get('project_path', ''))
+                            
+                            if user_info:
+                                username, domain = user_info
+                                inferred_email = construct_email(username, domain)
+                                # 如果推断的邮箱与当前用户邮箱匹配，显示该任务
+                                if inferred_email == current_user.email:
+                                    logging.info(f"Task {task_dict.get('id')[:8]} matches current user by inferred email: {inferred_email}")
+                                    # 继续处理该任务
+                                else:
+                                    # 推断的邮箱不匹配，过滤掉
+                                    continue
+                            else:
+                                # 无法推断用户，显示给当前用户（向后兼容）
+                                logging.debug(f"Task {task_dict.get('id')} has no user_id and cannot infer, showing to current user")
                 
                 # 添加用户邮箱信息
                 task_user_id = task_dict.get('user_id')
@@ -948,6 +972,16 @@ def execute_local():
         logging.error(traceback.format_exc())
         return jsonify({'error': f'Failed to create task: {str(e)}'}), 500
 
+
+@api_bp.route('/debug/session', methods=['GET'])
+def debug_session():
+    """调试会话信息"""
+    return jsonify({
+        'user_id': session.get('user_id'),
+        'is_admin': session.get('is_admin', False),
+        'user_email': session.get('user_email'),
+        'session_keys': list(session.keys()) if hasattr(session, 'keys') else []
+    }), 200
 
 @api_bp.route('/metrics/agent', methods=['GET'])
 def get_agent_metrics():
