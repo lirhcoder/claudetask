@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Form, Switch, InputNumber, Button, Space, message, Divider, Typography } from 'antd'
-import { SaveOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Card, Form, Switch, InputNumber, message, Typography } from 'antd'
 
 const { Title, Text } = Typography
 
 const SettingsPage = () => {
   const [form] = Form.useForm()
-  const [saving, setSaving] = useState(false)
   
   // 默认设置
   const defaultSettings = {
@@ -16,8 +14,8 @@ const SettingsPage = () => {
     taskPageRefreshInterval: 5
   }
 
+  // 加载设置
   useEffect(() => {
-    // 从 localStorage 加载设置
     const savedSettings = localStorage.getItem('claudetask_settings')
     if (savedSettings) {
       try {
@@ -34,34 +32,39 @@ const SettingsPage = () => {
     }
   }, [])
 
-  const handleSave = async () => {
+  // 保存设置的通用函数
+  const saveSettings = (changedValues, allValues) => {
     try {
-      setSaving(true)
-      const values = await form.validateFields()
-      
       // 保存到 localStorage
-      localStorage.setItem('claudetask_settings', JSON.stringify(values))
+      localStorage.setItem('claudetask_settings', JSON.stringify(allValues))
       
       // 触发自定义事件，通知其他组件更新设置
-      window.dispatchEvent(new CustomEvent('settings-updated', { detail: values }))
+      window.dispatchEvent(new CustomEvent('settings-updated', { detail: allValues }))
       
-      message.success('设置已保存')
+      console.log('设置已自动保存:', allValues)
     } catch (error) {
       console.error('保存设置失败:', error)
-      message.error('保存失败')
-    } finally {
-      setSaving(false)
+      message.error('保存设置失败')
     }
   }
 
-  const handleReset = () => {
-    // 清除 localStorage 中的设置
-    localStorage.removeItem('claudetask_settings')
-    // 重置表单为默认值
-    form.setFieldsValue(defaultSettings)
-    // 触发设置更新事件
-    window.dispatchEvent(new CustomEvent('settings-updated', { detail: defaultSettings }))
-    message.info('已重置为默认设置')
+  // 处理开关变化
+  const handleSwitchChange = (checked) => {
+    const allValues = form.getFieldsValue()
+    allValues.taskPageAutoRefresh = checked
+    form.setFieldsValue(allValues)
+    saveSettings({ taskPageAutoRefresh: checked }, allValues)
+  }
+
+  // 处理间隔时间变化
+  const handleIntervalChange = (value) => {
+    // 验证值的有效性
+    if (value && value >= 2 && value <= 60) {
+      const allValues = form.getFieldsValue()
+      allValues.taskPageRefreshInterval = value
+      form.setFieldsValue(allValues)
+      saveSettings({ taskPageRefreshInterval: value }, allValues)
+    }
   }
 
   return (
@@ -72,14 +75,17 @@ const SettingsPage = () => {
         <Form
           form={form}
           layout="vertical"
-          onFinish={handleSave}
         >
           <Form.Item
             label="启用任务列表自动刷新"
             name="taskPageAutoRefresh"
             valuePropName="checked"
           >
-            <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+            <Switch 
+              checkedChildren="开启" 
+              unCheckedChildren="关闭"
+              onChange={handleSwitchChange}
+            />
           </Form.Item>
 
           <Form.Item
@@ -89,14 +95,24 @@ const SettingsPage = () => {
               { required: true, message: '请输入刷新间隔' },
               { type: 'number', min: 2, max: 60, message: '间隔必须在2-60秒之间' }
             ]}
-            dependencies={['taskPageAutoRefresh']}
           >
             <InputNumber
               min={2}
               max={60}
               style={{ width: 200 }}
               addonAfter="秒"
-              disabled={!form.getFieldValue('taskPageAutoRefresh')}
+              onBlur={(e) => {
+                const value = parseInt(e.target.value)
+                if (!isNaN(value)) {
+                  handleIntervalChange(value)
+                }
+              }}
+              onPressEnter={(e) => {
+                const value = parseInt(e.target.value)
+                if (!isNaN(value)) {
+                  handleIntervalChange(value)
+                }
+              }}
             />
           </Form.Item>
           
@@ -110,26 +126,13 @@ const SettingsPage = () => {
           <Text type="secondary">
             注：正在运行任务的持续时间会每秒自动更新，无需额外设置。
           </Text>
-
-
-          <Form.Item style={{ marginTop: 32 }}>
-            <Space>
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                loading={saving}
-                htmlType="submit"
-              >
-                保存设置
-              </Button>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleReset}
-              >
-                重置为默认
-              </Button>
-            </Space>
-          </Form.Item>
+          
+          <br />
+          <br />
+          
+          <Text type="secondary" style={{ fontStyle: 'italic' }}>
+            提示：所有设置会自动保存，无需手动点击保存按钮。
+          </Text>
         </Form>
       </Card>
 
