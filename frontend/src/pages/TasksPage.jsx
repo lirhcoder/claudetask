@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Table, Tag, Button, Space, message, Tooltip, Badge, Input, Select } from 'antd'
 import { ReloadOutlined, EyeOutlined, StopOutlined, SyncOutlined, SearchOutlined, ClearOutlined, UserOutlined } from '@ant-design/icons'
+import { useSearchParams } from 'react-router-dom'
 import { taskApi } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 
 const TasksPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tasks, setTasks] = useState([])
   const [filteredTasks, setFilteredTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -15,9 +17,12 @@ const TasksPage = () => {
     taskPageAutoRefresh: false,
     taskPageRefreshInterval: 5
   })
-  const [searchText, setSearchText] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [userFilter, setUserFilter] = useState('')
+  
+  // 从URL参数初始化过滤条件
+  const [searchText, setSearchText] = useState(searchParams.get('search') || '')
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all')
+  const [userFilter, setUserFilter] = useState(searchParams.get('user') || '')
+  const [projectFilter, setProjectFilter] = useState(searchParams.get('project') || '')
   const [currentUser, setCurrentUser] = useState(null)
 
   // 格式化持续时间
@@ -136,8 +141,23 @@ const TasksPage = () => {
 
   // 当任务列表更新时，重新应用过滤器
   useEffect(() => {
-    filterTasks(tasks, searchText, statusFilter, userFilter)
+    filterTasks(tasks, searchText, statusFilter, userFilter, projectFilter)
   }, [tasks])
+  
+  // 当URL参数变化时更新状态
+  useEffect(() => {
+    const status = searchParams.get('status') || 'all'
+    const search = searchParams.get('search') || ''
+    const user = searchParams.get('user') || ''
+    const project = searchParams.get('project') || ''
+    
+    setStatusFilter(status)
+    setSearchText(search)
+    setUserFilter(user)
+    setProjectFilter(project)
+    
+    filterTasks(tasks, search, status, user, project)
+  }, [searchParams])
 
   const loadTasks = async () => {
     try {
@@ -145,7 +165,7 @@ const TasksPage = () => {
       const data = await taskApi.listTasks()
       setTasks(data.tasks)
       // 应用当前的过滤器
-      filterTasks(data.tasks, searchText, statusFilter, userFilter)
+      filterTasks(data.tasks, searchText, statusFilter, userFilter, projectFilter)
     } catch (error) {
       message.error('Failed to load tasks')
     } finally {
@@ -154,7 +174,7 @@ const TasksPage = () => {
   }
 
   // 过滤任务
-  const filterTasks = (taskList, search, status, user) => {
+  const filterTasks = (taskList, search, status, user, project) => {
     let filtered = [...taskList]
     
     // 状态过滤
@@ -168,6 +188,17 @@ const TasksPage = () => {
       filtered = filtered.filter(task => {
         const taskUser = task.user_email || task.user_id || ''
         return taskUser.toLowerCase().includes(userLower)
+      })
+    }
+    
+    // 项目过滤
+    if (project) {
+      const projectLower = project.toLowerCase()
+      filtered = filtered.filter(task => {
+        const taskPath = task.project_path || ''
+        // 检查项目路径是否包含项目名
+        return taskPath.toLowerCase().includes(projectLower) || 
+               taskPath.toLowerCase().endsWith('/' + projectLower)
       })
     }
     
@@ -186,22 +217,40 @@ const TasksPage = () => {
     setFilteredTasks(filtered)
   }
 
+  // 更新URL参数
+  const updateURLParams = (updates) => {
+    const newParams = new URLSearchParams(searchParams)
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value && value !== 'all') {
+        newParams.set(key, value)
+      } else {
+        newParams.delete(key)
+      }
+    })
+    
+    setSearchParams(newParams)
+  }
+
   // 处理搜索框变化
   const handleSearch = (value) => {
     setSearchText(value)
-    filterTasks(tasks, value, statusFilter, userFilter)
+    filterTasks(tasks, value, statusFilter, userFilter, projectFilter)
+    updateURLParams({ search: value })
   }
 
   // 处理状态过滤器变化
   const handleStatusFilter = (value) => {
     setStatusFilter(value)
-    filterTasks(tasks, searchText, value, userFilter)
+    filterTasks(tasks, searchText, value, userFilter, projectFilter)
+    updateURLParams({ status: value })
   }
 
   // 处理用户过滤器变化
   const handleUserFilter = (value) => {
     setUserFilter(value)
-    filterTasks(tasks, searchText, statusFilter, value)
+    filterTasks(tasks, searchText, statusFilter, value, projectFilter)
+    updateURLParams({ user: value })
   }
 
   // 清除所有过滤条件
@@ -209,7 +258,9 @@ const TasksPage = () => {
     setSearchText('')
     setStatusFilter('all')
     setUserFilter('')
-    filterTasks(tasks, '', 'all', '')
+    setProjectFilter('')
+    filterTasks(tasks, '', 'all', '', '')
+    setSearchParams(new URLSearchParams())
   }
 
   const handleCancelTask = async (taskId) => {
@@ -392,14 +443,27 @@ const TasksPage = () => {
           <Button
             icon={<ClearOutlined />}
             onClick={clearAllFilters}
-            disabled={!searchText && statusFilter === 'all' && !userFilter}
+            disabled={!searchText && statusFilter === 'all' && !userFilter && !projectFilter}
           >
             清除过滤
           </Button>
           <span style={{ color: '#666' }}>
             共 {filteredTasks.length} 个任务
-            {searchText || statusFilter !== 'all' || userFilter ? ` (总计 ${tasks.length} 个)` : ''}
+            {searchText || statusFilter !== 'all' || userFilter || projectFilter ? ` (总计 ${tasks.length} 个)` : ''}
           </span>
+          {projectFilter && (
+            <Tag 
+              closable 
+              onClose={() => {
+                setProjectFilter('')
+                filterTasks(tasks, searchText, statusFilter, userFilter, '')
+                updateURLParams({ project: '' })
+              }}
+              color="blue"
+            >
+              项目: {projectFilter}
+            </Tag>
+          )}
         </Space>
       </div>
 

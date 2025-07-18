@@ -36,6 +36,16 @@ const ProjectCard = ({ project, onDelete, onCreateTask }) => {
     return 'normal'
   }
   
+  // 跳转到任务列表（带过滤）
+  const navigateToTasks = (status) => {
+    const params = new URLSearchParams()
+    params.set('project', project.name)
+    if (status && status !== 'all') {
+      params.set('status', status)
+    }
+    navigate(`/tasks?${params.toString()}`)
+  }
+  
   // 渲染任务统计
   const renderTaskStats = () => {
     const stats = project.task_stats || {
@@ -47,39 +57,62 @@ const ProjectCard = ({ project, onDelete, onCreateTask }) => {
       cancelled: 0
     }
     
+    const StatisticWrapper = ({ children, onClick, disabled }) => (
+      <div 
+        onClick={disabled ? undefined : onClick}
+        style={{ 
+          cursor: disabled ? 'default' : 'pointer',
+          transition: 'all 0.3s',
+          borderRadius: '4px',
+          padding: '4px'
+        }}
+        className={disabled ? '' : 'statistic-clickable'}
+      >
+        {children}
+      </div>
+    )
+    
     return (
       <Row gutter={16}>
         <Col span={6}>
-          <Statistic
-            title="总任务"
-            value={stats.total}
-            valueStyle={{ fontSize: '20px' }}
-            prefix={<ClockCircleOutlined />}
-          />
+          <StatisticWrapper onClick={() => navigateToTasks('all')} disabled={stats.total === 0}>
+            <Statistic
+              title="总任务"
+              value={stats.total}
+              valueStyle={{ fontSize: '20px' }}
+              prefix={<ClockCircleOutlined />}
+            />
+          </StatisticWrapper>
         </Col>
         <Col span={6}>
-          <Statistic
-            title="运行中"
-            value={stats.running}
-            valueStyle={{ fontSize: '20px', color: '#1890ff' }}
-            prefix={<PlayCircleOutlined />}
-          />
+          <StatisticWrapper onClick={() => navigateToTasks('running')} disabled={stats.running === 0}>
+            <Statistic
+              title="运行中"
+              value={stats.running}
+              valueStyle={{ fontSize: '20px', color: '#1890ff' }}
+              prefix={<PlayCircleOutlined />}
+            />
+          </StatisticWrapper>
         </Col>
         <Col span={6}>
-          <Statistic
-            title="已完成"
-            value={stats.completed}
-            valueStyle={{ fontSize: '20px', color: '#52c41a' }}
-            prefix={<CheckCircleOutlined />}
-          />
+          <StatisticWrapper onClick={() => navigateToTasks('completed')} disabled={stats.completed === 0}>
+            <Statistic
+              title="已完成"
+              value={stats.completed}
+              valueStyle={{ fontSize: '20px', color: '#52c41a' }}
+              prefix={<CheckCircleOutlined />}
+            />
+          </StatisticWrapper>
         </Col>
         <Col span={6}>
-          <Statistic
-            title="失败"
-            value={stats.failed}
-            valueStyle={{ fontSize: '20px', color: stats.failed > 0 ? '#ff4d4f' : undefined }}
-            prefix={<CloseCircleOutlined />}
-          />
+          <StatisticWrapper onClick={() => navigateToTasks('failed')} disabled={stats.failed === 0}>
+            <Statistic
+              title="失败"
+              value={stats.failed}
+              valueStyle={{ fontSize: '20px', color: stats.failed > 0 ? '#ff4d4f' : undefined }}
+              prefix={<CloseCircleOutlined />}
+            />
+          </StatisticWrapper>
         </Col>
       </Row>
     )
@@ -178,9 +211,14 @@ const ProjectCard = ({ project, onDelete, onCreateTask }) => {
           }}
         />
         {project.task_stats && project.task_stats.pending > 0 && (
-          <Space style={{ marginTop: '8px' }}>
+          <Space 
+            style={{ marginTop: '8px', cursor: 'pointer' }}
+            onClick={() => navigateToTasks('pending')}
+          >
             <ExclamationCircleOutlined style={{ color: '#faad14' }} />
-            <Text type="secondary">{project.task_stats.pending} 个任务待处理</Text>
+            <Text type="secondary" style={{ textDecoration: 'underline' }}>
+              {project.task_stats.pending} 个任务待处理
+            </Text>
           </Space>
         )}
       </div>
