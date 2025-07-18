@@ -24,7 +24,7 @@ def create_app(config_name=None):
     
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(unified_bp)
-    app.register_blueprint(auth_bp)
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(repo_bp, url_prefix='/api')
     
     # Create upload directory
