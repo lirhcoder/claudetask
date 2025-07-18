@@ -142,7 +142,7 @@ class GitHubIntegration:
             cmd = ['git', 'clone', clone_url, local_path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             
-            if result.returncode \!= 0:
+            if result.returncode != 0:
                 logger.error(f"Git clone failed: {result.stderr}")
                 return False
             
@@ -234,7 +234,7 @@ class GitHubIntegration:
             cmd = ['git', 'pull', 'origin']
             result = subprocess.run(cmd, cwd=local_path, capture_output=True, text=True)
             
-            if result.returncode \!= 0:
+            if result.returncode != 0:
                 logger.error(f"Git pull failed: {result.stderr}")
                 return False
             
