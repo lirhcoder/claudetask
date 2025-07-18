@@ -297,7 +297,30 @@ const AdminPage = () => {
       dataIndex: 'task_count',
       key: 'task_count',
       render: (_, record) => {
-        const count = allTasks.filter(t => t.project_path === record.path).length
+        // 标准化路径以进行比较
+        const normalizedProjectPath = record.path.replace(/\\/g, '/')
+        const projectName = normalizedProjectPath.split('/').pop()
+        
+        // Debug: 打印第一次加载时的路径信息
+        if (allTasks.length > 0 && !window._debuggedPaths) {
+          window._debuggedPaths = true
+          console.log('Project path:', record.path, '-> normalized:', normalizedProjectPath, '-> name:', projectName)
+          console.log('Sample task paths:', allTasks.slice(0, 3).map(t => t.project_path))
+        }
+        
+        const count = allTasks.filter(t => {
+          if (!t.project_path) return false
+          
+          // 标准化任务路径
+          const normalizedTaskPath = t.project_path.replace(/\\/g, '/')
+          const taskProjectName = normalizedTaskPath.split('/').pop()
+          
+          // 比较完整路径或者项目名称
+          return normalizedTaskPath === normalizedProjectPath || 
+                 taskProjectName === projectName ||
+                 normalizedTaskPath.endsWith('/' + projectName)
+        }).length
+        
         return count
       }
     }
