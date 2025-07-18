@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Table, Tag, Button, Space, message, Tooltip, Badge } from 'antd'
-import { ReloadOutlined, EyeOutlined, StopOutlined, SyncOutlined } from '@ant-design/icons'
+import { Table, Tag, Button, Space, message, Tooltip, Badge, Input, Select } from 'antd'
+import { ReloadOutlined, EyeOutlined, StopOutlined, SyncOutlined, SearchOutlined } from '@ant-design/icons'
 import { taskApi } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 
 const TasksPage = () => {
   const [tasks, setTasks] = useState([])
+  const [filteredTasks, setFilteredTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedTask, setSelectedTask] = useState(null)
   const [modalVisible, setModalVisible] = useState(false)
@@ -14,6 +15,8 @@ const TasksPage = () => {
     taskPageAutoRefresh: false,
     taskPageRefreshInterval: 5
   })
+  const [searchText, setSearchText] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   // 格式化持续时间
   const formatDuration = (seconds) => {
@@ -118,16 +121,59 @@ const TasksPage = () => {
     return () => clearInterval(durationInterval)
   }, [tasks])
 
+  // 当任务列表更新时，重新应用过滤器
+  useEffect(() => {
+    filterTasks(tasks, searchText, statusFilter)
+  }, [tasks])
+
   const loadTasks = async () => {
     try {
       setLoading(true)
       const data = await taskApi.listTasks()
       setTasks(data.tasks)
+      // 应用当前的过滤器
+      filterTasks(data.tasks, searchText, statusFilter)
     } catch (error) {
       message.error('Failed to load tasks')
     } finally {
       setLoading(false)
     }
+  }
+
+  // 过滤任务
+  const filterTasks = (taskList, search, status) => {
+    let filtered = [...taskList]
+    
+    // 状态过滤
+    if (status !== 'all') {
+      filtered = filtered.filter(task => task.status === status)
+    }
+    
+    // 文本搜索（搜索ID、提示词、项目路径）
+    if (search) {
+      const searchLower = search.toLowerCase()
+      filtered = filtered.filter(task => {
+        return (
+          task.id.toLowerCase().includes(searchLower) ||
+          task.prompt.toLowerCase().includes(searchLower) ||
+          task.project_path.toLowerCase().includes(searchLower)
+        )
+      })
+    }
+    
+    setFilteredTasks(filtered)
+  }
+
+  // 处理搜索框变化
+  const handleSearch = (value) => {
+    setSearchText(value)
+    filterTasks(tasks, value, statusFilter)
+  }
+
+  // 处理状态过滤器变化
+  const handleStatusFilter = (value) => {
+    setStatusFilter(value)
+    filterTasks(tasks, searchText, value)
   }
 
   const handleCancelTask = async (taskId) => {
@@ -239,31 +285,61 @@ const TasksPage = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Task History</h1>
-        <Space>
-          {settings.taskPageAutoRefresh && (
-            <Badge 
-              dot 
-              color="green"
-              title={`自动刷新: 每${settings.taskPageRefreshInterval}秒`}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h1>Task History</h1>
+          <Space>
+            {settings.taskPageAutoRefresh && (
+              <Badge 
+                dot 
+                color="green"
+                title={`自动刷新: 每${settings.taskPageRefreshInterval}秒`}
+              >
+                <SyncOutlined style={{ color: '#52c41a' }} />
+              </Badge>
+            )}
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={loadTasks}
+              loading={loading}
             >
-              <SyncOutlined style={{ color: '#52c41a' }} />
-            </Badge>
-          )}
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={loadTasks}
-            loading={loading}
-          >
-            Refresh
-          </Button>
+              Refresh
+            </Button>
+          </Space>
+        </div>
+        
+        <Space style={{ width: '100%', marginBottom: 16 }} size="middle">
+          <Input
+            placeholder="搜索任务ID、提示词或项目名称..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => handleSearch(e.target.value)}
+            style={{ width: 300 }}
+            allowClear
+          />
+          <Select
+            value={statusFilter}
+            onChange={handleStatusFilter}
+            style={{ width: 150 }}
+            options={[
+              { value: 'all', label: '全部状态' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'running', label: 'Running' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'failed', label: 'Failed' },
+              { value: 'cancelled', label: 'Cancelled' }
+            ]}
+          />
+          <span style={{ color: '#666' }}>
+            共 {filteredTasks.length} 个任务
+            {searchText || statusFilter !== 'all' ? ` (总计 ${tasks.length} 个)` : ''}
+          </span>
         </Space>
       </div>
 
       <Table
         columns={columns}
-        dataSource={tasks}
+        dataSource={filteredTasks}
         rowKey="id"
         loading={loading}
         pagination={{
