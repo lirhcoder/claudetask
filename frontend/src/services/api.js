@@ -40,7 +40,7 @@ apiClient.interceptors.response.use(
 )
 
 export const projectApi = {
-  listProjects: () => apiClient.get('/projects'),
+  listProjects: (filter = 'all') => apiClient.get('/projects', { params: { filter } }),
   listAllProjects: () => apiClient.get('/admin/projects'),  // 管理员接口
   createProject: (name, initializeReadme = false) => 
     apiClient.post('/projects', { name, initialize_readme: initializeReadme }),
@@ -53,6 +53,12 @@ export const projectApi = {
   uploadFile: (formData) => apiClient.post('/files/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  // 权限管理
+  getProjectPermissions: (projectId) => apiClient.get(`/projects/${projectId}/permissions`),
+  grantProjectPermission: (projectId, userId, role) => 
+    apiClient.post(`/projects/${projectId}/permissions`, { user_id: userId, role }),
+  revokeProjectPermission: (projectId, userId) => 
+    apiClient.delete(`/projects/${projectId}/permissions`, { params: { user_id: userId } }),
 }
 
 // Export individual functions for convenience

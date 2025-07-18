@@ -10,6 +10,7 @@ from utils.validators import validate_project_path, validate_prompt
 from datetime import datetime
 from models.task import Task, TaskManager
 from models.project import ProjectManager
+from models.project_permission import ProjectPermission, ProjectPermissionManager
 
 api_bp = Blueprint('api', __name__)
 
@@ -129,20 +130,23 @@ def list_projects():
     from config import Config
     projects_dir = Config.PROJECTS_DIR
     
-    # 初始化项目管理器
+    # 获取过滤参数
+    filter_type = request.args.get('filter', 'all')  # all, owned, participated
+    
+    # 初始化管理器
     project_manager = ProjectManager()
+    permission_manager = ProjectPermissionManager()
     
     # 从文件系统同步项目
     project_manager.sync_from_filesystem(projects_dir, user_id=session.get('user_id'))
     
     # 获取当前用户的项目
     user_id = session.get('user_id')
-    if user_id:
-        # 如果有用户登录，只显示该用户的项目
-        db_projects = project_manager.list_projects(user_id=user_id)
-    else:
-        # 如果没有用户登录，显示所有项目
-        db_projects = project_manager.list_projects()
+    if not user_id:
+        return jsonify({'projects': []}), 200
+    
+    # 根据过滤条件获取项目
+    db_projects = permission_manager.get_user_projects_by_filter(user_id, filter_type)
     
     # 丰富项目信息
     projects = []
@@ -155,6 +159,7 @@ def list_projects():
                 'path': str(project_path.relative_to(Config.PROJECTS_DIR.parent)) if str(project_path).startswith(str(Config.PROJECTS_DIR.parent)) else proj['path'],
                 'absolute_path': str(project_path.absolute()).replace('\\', '/'),
                 'user_id': proj.get('user_id'),
+                'role': proj.get('role', 'owner'),  # 用户在项目中的角色
                 'created_at': proj.get('created_at', datetime.fromtimestamp(project_path.stat().st_ctime).isoformat()),
                 'modified_at': datetime.fromtimestamp(project_path.stat().st_mtime).isoformat()
             }
@@ -216,16 +221,40 @@ def project_details(project_name):
     if not project_path.exists():
         return jsonify({'error': 'Project not found'}), 404
     
+    # 获取用户ID和项目ID
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    # 获取项目ID
+    project_manager = ProjectManager()
+    project = project_manager.get_project_by_path(str(project_path))
+    if not project:
+        return jsonify({'error': 'Project not found in database'}), 404
+    
+    # 检查权限
+    permission_manager = ProjectPermissionManager()
+    
     if request.method == 'DELETE':
+        # 检查删除权限
+        if not permission_manager.check_permission(project.id, user_id, 'delete'):
+            return jsonify({'error': 'You do not have permission to delete this project'}), 403
+        
         # Delete project
         try:
             import shutil
             shutil.rmtree(str(project_path))
+            # 同时删除数据库记录
+            project_manager.delete_project(project.id)
             return jsonify({'message': 'Project deleted successfully'}), 200
         except Exception as e:
             return jsonify({'error': f'Failed to delete project: {str(e)}'}), 500
     
     elif request.method == 'PUT':
+        # 检查编辑权限
+        if not permission_manager.check_permission(project.id, user_id, 'edit'):
+            return jsonify({'error': 'You do not have permission to edit this project'}), 403
+        
         # Update project (rename/move)
         data = request.get_json()
         new_path = data.get('new_path')
@@ -245,6 +274,12 @@ def project_details(project_name):
             import shutil
             shutil.move(str(project_path), str(new_path))
             
+            # 更新数据库中的项目路径
+            project_manager.update_project(project.id, {
+                'name': new_path.name,
+                'path': str(new_path)
+            })
+            
             return jsonify({
                 'message': 'Project updated successfully',
                 'new_name': new_path.name,
@@ -252,6 +287,10 @@ def project_details(project_name):
             }), 200
         except Exception as e:
             return jsonify({'error': f'Failed to update project: {str(e)}'}), 500
+    
+    # 检查查看权限
+    if not permission_manager.check_permission(project.id, user_id, 'view'):
+        return jsonify({'error': 'You do not have permission to view this project'}), 403
     
     # Get file tree
     def get_file_tree(path, max_depth=3, current_depth=0):
@@ -278,10 +317,20 @@ def project_details(project_name):
             
         return tree
     
+    # 获取用户在项目中的角色
+    role = permission_manager.db.get_user_role(project.id, user_id)
+    
     project_info = {
+        'id': project.id,
         'name': project_name,
         'path': str(project_path.relative_to(Config.PROJECTS_DIR.parent)),
         'absolute_path': str(project_path.absolute()).replace('\\', '/'),
+        'role': role,
+        'permissions': {
+            'can_view': ProjectPermission.can_view(role),
+            'can_edit': ProjectPermission.can_edit(role),
+            'can_delete': ProjectPermission.can_delete(role)
+        },
         'files': get_file_tree(project_path)
     }
     
@@ -931,3 +980,51 @@ def admin_list_all_projects():
         enriched_projects.append(project)
     
     return jsonify({'projects': enriched_projects}), 200
+
+
+@api_bp.route('/projects/<project_id>/permissions', methods=['GET', 'POST', 'DELETE'])
+def manage_project_permissions(project_id):
+    """管理项目权限"""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    permission_manager = ProjectPermissionManager()
+    
+    # 检查当前用户是否有管理权限（只有 owner 可以管理权限）
+    current_role = permission_manager.db.get_user_role(project_id, user_id)
+    if current_role != ProjectPermission.OWNER:
+        return jsonify({'error': 'Only project owner can manage permissions'}), 403
+    
+    if request.method == 'GET':
+        # 获取项目的所有用户权限
+        users = permission_manager.db.get_project_users(project_id)
+        return jsonify({'users': users}), 200
+    
+    elif request.method == 'POST':
+        # 授予权限
+        data = request.get_json()
+        target_user_id = data.get('user_id')
+        role = data.get('role')
+        
+        if not target_user_id or not role:
+            return jsonify({'error': 'user_id and role are required'}), 400
+        
+        try:
+            permission_manager.grant_permission(project_id, target_user_id, role, user_id)
+            return jsonify({'message': 'Permission granted successfully'}), 200
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+    
+    elif request.method == 'DELETE':
+        # 撤销权限
+        target_user_id = request.args.get('user_id')
+        if not target_user_id:
+            return jsonify({'error': 'user_id is required'}), 400
+        
+        # 不能撤销 owner 的权限
+        if target_user_id == user_id:
+            return jsonify({'error': 'Cannot revoke owner permissions'}), 400
+        
+        permission_manager.db.revoke_permission(project_id, target_user_id)
+        return jsonify({'message': 'Permission revoked successfully'}), 200

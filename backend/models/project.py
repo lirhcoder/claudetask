@@ -119,6 +119,17 @@ class ProjectDB:
                 return dict(row)
             return None
     
+    def get_project_by_path(self, path: str) -> Optional[Dict]:
+        """通过路径获取项目"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM projects WHERE path = ?', (path,))
+            row = cursor.fetchone()
+            
+            if row:
+                return dict(row)
+            return None
+    
     def get_all_projects(self, user_id: Optional[str] = None) -> List[Dict]:
         """获取项目列表"""
         with self.get_connection() as conn:
@@ -193,13 +204,37 @@ class ProjectManager:
             )
         return None
     
+    def get_project_by_path(self, path: str) -> Optional[Project]:
+        """通过路径获取项目"""
+        data = self.db.get_project_by_path(path)
+        if data:
+            return Project(
+                id=data['id'],
+                name=data['name'],
+                path=data['path'],
+                user_id=data.get('user_id'),
+                created_at=data.get('created_at'),
+                updated_at=data.get('updated_at')
+            )
+        return None
+    
     def list_projects(self, user_id: Optional[str] = None) -> List[Dict]:
         """列出项目"""
         projects_data = self.db.get_all_projects(user_id)
         return projects_data
     
-    def update_project(self, project: Project):
+    def update_project(self, project_id: str, updates: Dict):
         """更新项目"""
+        project = self.get_project(project_id)
+        if not project:
+            raise ValueError(f"Project not found: {project_id}")
+        
+        # 更新项目属性
+        for key, value in updates.items():
+            if hasattr(project, key):
+                setattr(project, key, value)
+        
+        project.updated_at = datetime.now()
         self.db.save_project(project)
     
     def delete_project(self, project_id: str) -> bool:

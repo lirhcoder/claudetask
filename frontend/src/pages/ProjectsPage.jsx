@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Table, Button, Modal, Form, Input, message, Space, Tooltip, Typography, Tag, Spin, Empty, Switch } from 'antd'
+import { Card, Table, Button, Modal, Form, Input, message, Space, Tooltip, Typography, Tag, Spin, Empty, Switch, Radio } from 'antd'
 import { FolderOutlined, PlusOutlined, DeleteOutlined, EditOutlined, EyeOutlined, ReloadOutlined, FolderOpenOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { projectApi } from '../services/api'
@@ -11,17 +11,18 @@ const ProjectsPage = () => {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
+  const [projectFilter, setProjectFilter] = useState('all') // all, owned, participated
   const [form] = Form.useForm()
   const navigate = useNavigate()
 
   useEffect(() => {
     fetchProjects()
-  }, [])
+  }, [projectFilter])
 
   const fetchProjects = async () => {
     setLoading(true)
     try {
-      const data = await projectApi.listProjects()
+      const data = await projectApi.listProjects(projectFilter)
       setProjects(data.projects || [])
     } catch (error) {
       message.error('获取项目列表失败')
@@ -73,10 +74,15 @@ const ProjectsPage = () => {
       title: '项目名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text) => (
+      render: (text, record) => (
         <Space>
           <FolderOpenOutlined style={{ color: '#1890ff' }} />
           <Text strong>{text}</Text>
+          {record.role && record.role !== 'owner' && (
+            <Tag color={record.role === 'admin' ? 'blue' : 'green'}>
+              {record.role === 'admin' ? '管理员' : '查看者'}
+            </Tag>
+          )}
         </Space>
       ),
     },
@@ -97,6 +103,21 @@ const ProjectsPage = () => {
       key: 'created_at',
       render: (text) => new Date(text).toLocaleString('zh-CN'),
       sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+    },
+    {
+      title: '权限',
+      dataIndex: 'role',
+      key: 'role',
+      width: 100,
+      render: (role) => {
+        const roleMap = {
+          'owner': { text: '所有者', color: 'gold' },
+          'admin': { text: '管理员', color: 'blue' },
+          'viewer': { text: '查看者', color: 'green' }
+        }
+        const roleInfo = roleMap[role] || { text: role, color: 'default' }
+        return <Tag color={roleInfo.color}>{roleInfo.text}</Tag>
+      },
     },
     {
       title: '最后修改',
@@ -124,6 +145,7 @@ const ProjectsPage = () => {
               danger
               icon={<DeleteOutlined />}
               onClick={() => handleDeleteProject(record.name)}
+              disabled={record.role && record.role !== 'owner'}
             />
           </Tooltip>
         </Space>
@@ -159,6 +181,14 @@ const ProjectsPage = () => {
           </Space>
         }
       >
+        <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
+          <Radio.Group value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+            <Radio.Button value="all">所有项目</Radio.Button>
+            <Radio.Button value="owned">我创建的</Radio.Button>
+            <Radio.Button value="participated">我参与的</Radio.Button>
+          </Radio.Group>
+        </Space>
+        
         {loading ? (
           <div style={{ textAlign: 'center', padding: '50px' }}>
             <Spin size="large" />
