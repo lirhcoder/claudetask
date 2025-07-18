@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Card, Row, Col, Statistic, Table, Tabs, Progress, Tag, Button, Radio, Spin, message } from 'antd';
+import { Layout, Card, Row, Col, Statistic, Table, Tabs, Progress, Tag, Button, Radio, Spin, message, Tooltip } from 'antd';
 import {
   TrophyOutlined,
   RiseOutlined,
@@ -10,7 +10,6 @@ import {
   BarChartOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
-import { Line } from '@ant-design/charts';
 import './AgentIndexPage.css';
 
 const { Content } = Layout;
@@ -151,30 +150,66 @@ const AgentIndexPage = () => {
     }
   ];
 
-  // 历史趋势图配置
-  const historyConfig = {
-    data: userHistory.map(item => ({
-      month: item.month,
-      value: item.index * 100,
-      type: '员工指数'
-    })),
-    xField: 'month',
-    yField: 'value',
-    seriesField: 'type',
-    yAxis: {
-      label: {
-        formatter: (v) => `${v}%`,
-      },
-    },
-    tooltip: {
-      formatter: (datum) => {
-        return {
-          name: datum.type,
-          value: `${datum.value.toFixed(2)}%`
-        };
-      },
-    },
-    smooth: true,
+  // 简单的历史趋势展示
+  const renderHistoryChart = () => {
+    if (userHistory.length === 0) return null;
+    
+    const maxIndex = Math.max(...userHistory.map(h => h.index));
+    const scale = maxIndex > 0 ? 100 / maxIndex : 1;
+    
+    return (
+      <div style={{ marginBottom: 24 }}>
+        <h3>近6个月员工指数趋势</h3>
+        <div style={{ display: 'flex', alignItems: 'flex-end', height: 200, borderBottom: '1px solid #f0f0f0', marginBottom: 16 }}>
+          {userHistory.map((item, index) => {
+            const height = item.index * scale * 2; // 调整高度比例
+            return (
+              <div 
+                key={item.month}
+                style={{ 
+                  flex: 1, 
+                  margin: '0 4px',
+                  position: 'relative'
+                }}
+              >
+                <div 
+                  style={{ 
+                    background: '#1890ff', 
+                    height: `${height}%`,
+                    minHeight: 5,
+                    transition: 'height 0.3s',
+                    position: 'relative'
+                  }}
+                >
+                  <Tooltip title={`${formatEmployeeIndex(item.index)}`}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      top: -20, 
+                      left: '50%', 
+                      transform: 'translateX(-50%)',
+                      fontSize: 12,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {formatEmployeeIndex(item.index)}
+                    </div>
+                  </Tooltip>
+                </div>
+                <div style={{ 
+                  position: 'absolute', 
+                  bottom: -20, 
+                  left: '50%', 
+                  transform: 'translateX(-50%)',
+                  fontSize: 10,
+                  whiteSpace: 'nowrap'
+                }}>
+                  {item.month.substring(5)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -269,8 +304,7 @@ const AgentIndexPage = () => {
             <TabPane tab={<span><RiseOutlined /> 历史趋势</span>} key="history">
               {userHistory.length > 0 ? (
                 <div>
-                  <h3>近6个月员工指数趋势</h3>
-                  <Line {...historyConfig} height={300} />
+                  {renderHistoryChart()}
                   
                   <Table
                     style={{ marginTop: 24 }}
