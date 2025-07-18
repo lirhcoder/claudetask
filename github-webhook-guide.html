@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Webhook 集成操作指南</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #24292e;
+            border-bottom: 3px solid #0366d6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0366d6;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #586069;
+        }
+        .step {
+            background-color: #f6f8fa;
+            border-left: 4px solid #0366d6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .api-endpoint {
+            background-color: #1b1f23;
+            color: #e1e4e8;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .method {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .method-get { background-color: #28a745; color: white; }
+        .method-post { background-color: #0366d6; color: white; }
+        .code-block {
+            background-color: #f6f8fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: monospace;
+            border: 1px solid #e1e4e8;
+        }
+        .warning {
+            background-color: #fffbdd;
+            border: 1px solid #f0b849;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #dcffe4;
+            border: 1px solid #34d058;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .info {
+            background-color: #dfe7f3;
+            border: 1px solid #79b8ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .example {
+            background-color: #f0f9ff;
+            border: 1px solid #1890ff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f6f8fa;
+            font-weight: bold;
+        }
+        .event-type {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #0366d6;
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 2px;
+        }
+        .webhook-flow {
+            background-color: #f6f8fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .security-tip {
+            background-color: #fff5f5;
+            border: 1px solid #ff7875;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 GitHub Webhook 集成操作指南</h1>
+        
+        <div class="info">
+            <strong>📋 功能概述：</strong>
+            <ul>
+                <li>配置 GitHub Webhook 接收事件</li>
+                <li>处理各种 GitHub 事件</li>
+                <li>验证 Webhook 安全性</li>
+                <li>自动化工作流程</li>
+                <li>监控和调试 Webhook</li>
+            </ul>
+        </div>
+
+        <h2>一、Webhook 工作原理</h2>
+
+        <div class="webhook-flow">
+            <h3>事件流程图</h3>
+            <pre>
+GitHub 仓库                    您的应用                     处理结果
+    |                            |                           |
+    |  1. 发生事件（push等）      |                           |
+    |--------------------------->|                           |
+    |  2. POST 请求到 Webhook URL |                           |
+    |                            |                           |
+    |                            | 3. 验证签名               |
+    |                            |                           |
+    |                            | 4. 处理事件               |
+    |                            |-------------------------->|
+    |                            |                           |
+    |  5. 返回 200 OK            |                           |
+    |<---------------------------|                           |
+            </pre>
+        </div>
+
+        <h2>二、配置 Webhook</h2>
+
+        <div class="example">
+            <h3>场景：为仓库配置 Webhook</h3>
+            
+            <div class="step">
+                <h4>步骤 1：准备 Webhook 接收端点</h4>
+                <p>确保您的应用有一个公开可访问的 URL 来接收 Webhook：</p>
+                <div class="code-block">
+# 本地开发时可使用 ngrok 暴露本地端口
+ngrok http 5000
+
+# 将得到类似这样的 URL：
+https://abc123.ngrok.io/api/webhooks/github
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>步骤 2：在 GitHub 上创建 Webhook</h4>
+                <p>方式一：通过 GitHub 网页界面</p>
+                <ol>
+                    <li>进入仓库设置页面</li>
+                    <li>选择 Webhooks → Add webhook</li>
+                    <li>填写配置信息</li>
+                </ol>
+                
+                <p>方式二：通过 API 创建</p>
+                <div class="api-endpoint">
+                    <span class="method method-post">POST</span> /api/repos/{owner}/{repo}/create-webhook
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "webhook_url": "https://your-app.com/api/webhooks/github",
+    "secret": "your-webhook-secret-key",
+    "events": ["push", "pull_request", "issues", "issue_comment"]
+}
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>步骤 3：配置 Webhook 设置</h4>
+                <table>
+                    <tr>
+                        <th>设置项</th>
+                        <th>说明</th>
+                        <th>推荐值</th>
+                    </tr>
+                    <tr>
+                        <td>Payload URL</td>
+                        <td>接收 Webhook 的 URL</td>
+                        <td>https://your-app.com/api/webhooks/github</td>
+                    </tr>
+                    <tr>
+                        <td>Content type</td>
+                        <td>请求内容类型</td>
+                        <td>application/json</td>
+                    </tr>
+                    <tr>
+                        <td>Secret</td>
+                        <td>用于验证请求的密钥</td>
+                        <td>随机生成的安全字符串</td>
+                    </tr>
+                    <tr>
+                        <td>SSL verification</td>
+                        <td>SSL 证书验证</td>
+                        <td>启用（生产环境）</td>
+                    </tr>
+                    <tr>
+                        <td>Events</td>
+                        <td>触发 Webhook 的事件</td>
+                        <td>根据需求选择</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <h2>三、处理 Webhook 事件</h2>
+
+        <div class="example">
+            <h3>Webhook 端点实现</h3>
+            
+            <div class="step">
+                <h4>接收和验证 Webhook</h4>
+                <div class="api-endpoint">
+                    <span class="method method-post">POST</span> /api/webhooks/github
+                </div>
+                
+                <p>请求头示例：</p>
+                <div class="code-block">
+X-GitHub-Event: push
+X-Hub-Signature-256: sha256=abc123...
+X-GitHub-Delivery: 12345-67890-abcdef
+Content-Type: application/json
+                </div>
+
+                <p>请求体示例（push 事件）：</p>
+                <div class="code-block">
+{
+    "ref": "refs/heads/main",
+    "before": "abc123...",
+    "after": "def456...",
+    "repository": {
+        "id": 123456,
+        "name": "my-project",
+        "full_name": "myteam/my-project",
+        "owner": {
+            "login": "myteam",
+            "type": "Organization"
+        }
+    },
+    "pusher": {
+        "name": "zhangsan",
+        "email": "zhangsan@example.com"
+    },
+    "commits": [
+        {
+            "id": "def456...",
+            "message": "Update README.md",
+            "author": {
+                "name": "张三",
+                "email": "zhangsan@example.com"
+            },
+            "url": "https://github.com/myteam/my-project/commit/def456"
+        }
+    ]
+}
+                </div>
+            </div>
+        </div>
+
+        <h2>四、支持的事件类型</h2>
+
+        <table>
+            <tr>
+                <th>事件类型</th>
+                <th>触发时机</th>
+                <th>主要用途</th>
+            </tr>
+            <tr>
+                <td><span class="event-type">push</span></td>
+                <td>代码推送到仓库</td>
+                <td>触发 CI/CD、同步代码</td>
+            </tr>
+            <tr>
+                <td><span class="event-type">pull_request</span></td>
+                <td>PR 创建、更新、关闭</td>
+                <td>代码审查、自动测试</td>
+            </tr>
+            <tr>
+                <td><span class="event-type">issues</span></td>
+                <td>Issue 创建、更新、关闭</td>
+                <td>任务跟踪、通知</td>
+            </tr>
+            <tr>
+                <td><span class="event-type">issue_comment</span></td>
+                <td>Issue 或 PR 评论</td>
+                <td>协作通知、自动回复</td>
+            </tr>
+            <tr>
+                <td><span class="event-type">create</span></td>
+                <td>创建分支或标签</td>
+                <td>分支管理、版本发布</td>
+            </tr>
+            <tr>
+                <td><span class="event-type">delete</span></td>
+                <td>删除分支或标签</td>
+                <td>清理操作</td>
+            </tr>
+            <tr>
+                <td><span class="event-type">release</span></td>
+                <td>发布新版本</td>
+                <td>自动部署、通知</td>
+            </tr>
+            <tr>
+                <td><span class="event-type">ping</span></td>
+                <td>Webhook 创建或测试</td>
+                <td>验证连接</td>
+            </tr>
+        </table>
+
+        <h2>五、安全性验证</h2>
+
+        <div class="security-tip">
+            <h3>🔒 验证 Webhook 签名</h3>
+            <p>为了确保请求来自 GitHub，必须验证请求签名：</p>
+            
+            <div class="code-block">
+import hmac
+import hashlib
+
+def verify_webhook_signature(payload_body, signature_header, secret):
+    """验证 GitHub Webhook 签名"""
+    if not signature_header:
+        return False
+    
+    # 分离算法和签名
+    sha_name, signature = signature_header.split('=')
+    if sha_name != 'sha256':
+        return False
+    
+    # 计算期望的签名
+    mac = hmac.new(
+        secret.encode('utf-8'),
+        msg=payload_body,
+        digestmod=hashlib.sha256
+    )
+    expected_signature = mac.hexdigest()
+    
+    # 安全比较
+    return hmac.compare_digest(expected_signature, signature)
+
+# 在处理函数中使用
+@webhook_bp.route('/github', methods=['POST'])
+def github_webhook():
+    # 获取签名
+    signature = request.headers.get('X-Hub-Signature-256')
+    
+    # 验证签名
+    if not verify_webhook_signature(
+        request.get_data(),
+        signature,
+        WEBHOOK_SECRET
+    ):
+        return jsonify({'error': 'Invalid signature'}), 401
+    
+    # 处理事件...
+            </div>
+        </div>
+
+        <h2>六、事件处理示例</h2>
+
+        <div class="example">
+            <h3>处理不同类型的事件</h3>
+            
+            <div class="step">
+                <h4>Push 事件处理</h4>
+                <div class="code-block">
+def handle_push_event(payload):
+    """处理代码推送事件"""
+    repo_name = payload['repository']['full_name']
+    branch = payload['ref'].split('/')[-1]
+    pusher = payload['pusher']['name']
+    commits = payload['commits']
+    
+    # 记录推送信息
+    logger.info(f"{pusher} pushed {len(commits)} commits to {branch}")
+    
+    # 触发相应操作
+    if branch == 'main':
+        # 触发生产部署
+        trigger_deployment(repo_name, 'production')
+    elif branch == 'develop':
+        # 触发测试环境部署
+        trigger_deployment(repo_name, 'staging')
+    
+    # 同步本地代码
+    sync_repository(repo_name, branch)
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>Pull Request 事件处理</h4>
+                <div class="code-block">
+def handle_pull_request_event(payload):
+    """处理 PR 事件"""
+    action = payload['action']
+    pr = payload['pull_request']
+    
+    if action == 'opened':
+        # 新 PR 创建
+        logger.info(f"New PR #{pr['number']}: {pr['title']}")
+        # 触发自动化测试
+        run_pr_checks(pr['number'])
+        
+    elif action == 'closed' and pr['merged']:
+        # PR 被合并
+        logger.info(f"PR #{pr['number']} merged")
+        # 更新相关 Issue
+        update_related_issues(pr['body'])
+        
+    elif action == 'synchronize':
+        # PR 更新
+        logger.info(f"PR #{pr['number']} updated")
+        # 重新运行测试
+        run_pr_checks(pr['number'])
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>Issue 事件处理</h4>
+                <div class="code-block">
+def handle_issue_event(payload):
+    """处理 Issue 事件"""
+    action = payload['action']
+    issue = payload['issue']
+    
+    if action == 'opened':
+        # 新 Issue 创建
+        # 自动分配标签
+        if 'bug' in issue['title'].lower():
+            add_label(issue['number'], 'bug')
+        
+        # 发送通知
+        notify_team(f"New issue: {issue['title']}")
+        
+    elif action == 'closed':
+        # Issue 关闭
+        # 更新统计信息
+        update_issue_metrics(issue['number'])
+                </div>
+            </div>
+        </div>
+
+        <h2>七、查看 Webhook 历史</h2>
+
+        <div class="example">
+            <h3>监控 Webhook 执行情况</h3>
+            
+            <div class="api-endpoint">
+                <span class="method method-get">GET</span> /api/webhooks/github/events
+            </div>
+            
+            <p>响应示例：</p>
+            <div class="code-block">
+{
+    "events": [
+        {
+            "id": "event_123",
+            "repository": "myteam/project",
+            "event_type": "push",
+            "payload": {
+                "ref": "refs/heads/main",
+                "commits_count": 3
+            },
+            "processed_at": "2024-01-15T10:30:00Z",
+            "status": "success"
+        },
+        {
+            "id": "event_124",
+            "repository": "myteam/project",
+            "event_type": "pull_request",
+            "payload": {
+                "action": "opened",
+                "pr_number": 42
+            },
+            "processed_at": "2024-01-15T11:00:00Z",
+            "status": "success"
+        }
+    ]
+}
+            </div>
+        </div>
+
+        <h2>八、测试 Webhook</h2>
+
+        <div class="example">
+            <h3>本地测试方法</h3>
+            
+            <div class="step">
+                <h4>方法 1：使用 ngrok</h4>
+                <div class="code-block">
+# 1. 安装 ngrok
+# 2. 暴露本地端口
+ngrok http 5000
+
+# 3. 使用生成的 URL 配置 GitHub Webhook
+# 例如：https://abc123.ngrok.io/api/webhooks/github
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>方法 2：手动测试</h4>
+                <div class="code-block">
+# 使用 curl 模拟 GitHub Webhook
+curl -X POST http://localhost:5000/api/webhooks/github \
+  -H "Content-Type: application/json" \
+  -H "X-GitHub-Event: ping" \
+  -H "X-Hub-Signature-256: sha256=..." \
+  -d '{
+    "zen": "Design for failure.",
+    "hook_id": 123456,
+    "repository": {
+      "full_name": "myteam/project"
+    }
+  }'
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>方法 3：GitHub 测试功能</h4>
+                <p>在 GitHub Webhook 设置页面：</p>
+                <ol>
+                    <li>找到已配置的 Webhook</li>
+                    <li>点击 "Recent Deliveries"</li>
+                    <li>选择一个历史请求</li>
+                    <li>点击 "Redeliver" 重新发送</li>
+                </ol>
+            </div>
+        </div>
+
+        <h2>九、故障排除</h2>
+
+        <table>
+            <tr>
+                <th>问题</th>
+                <th>可能原因</th>
+                <th>解决方法</th>
+            </tr>
+            <tr>
+                <td>Webhook 未触发</td>
+                <td>事件类型未选择</td>
+                <td>检查 Webhook 配置中的事件选择</td>
+            </tr>
+            <tr>
+                <td>收到 401 错误</td>
+                <td>签名验证失败</td>
+                <td>检查 Secret 配置是否正确</td>
+            </tr>
+            <tr>
+                <td>收到 404 错误</td>
+                <td>URL 错误</td>
+                <td>确认 Webhook URL 正确且可访问</td>
+            </tr>
+            <tr>
+                <td>超时错误</td>
+                <td>处理时间过长</td>
+                <td>异步处理长时间任务</td>
+            </tr>
+            <tr>
+                <td>重复接收</td>
+                <td>GitHub 重试机制</td>
+                <td>实现幂等性处理</td>
+            </tr>
+        </table>
+
+        <h2>十、完整实现示例</h2>
+
+        <div class="example">
+            <h3>Node.js Express 实现</h3>
+            <div class="code-block">
+const express = require('express');
+const crypto = require('crypto');
+const router = express.Router();
+
+// 验证签名中间件
+const verifySignature = (req, res, next) => {
+    const signature = req.headers['x-hub-signature-256'];
+    if (!signature) {
+        return res.status(401).send('No signature');
+    }
+
+    const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
+    const digest = 'sha256=' + hmac.update(req.rawBody).digest('hex');
+
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+        return res.status(401).send('Invalid signature');
+    }
+
+    next();
+};
+
+// Webhook 路由
+router.post('/github', verifySignature, async (req, res) => {
+    const event = req.headers['x-github-event'];
+    const payload = req.body;
+
+    console.log(`Received ${event} event`);
+
+    try {
+        switch (event) {
+            case 'push':
+                await handlePush(payload);
+                break;
+            case 'pull_request':
+                await handlePullRequest(payload);
+                break;
+            case 'issues':
+                await handleIssue(payload);
+                break;
+            case 'ping':
+                console.log('Ping received:', payload.zen);
+                break;
+            default:
+                console.log(`Unhandled event: ${event}`);
+        }
+
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('Webhook processing error:', error);
+        res.status(500).send('Processing error');
+    }
+});
+
+// 处理函数
+async function handlePush(payload) {
+    const { repository, ref, commits } = payload;
+    const branch = ref.split('/').pop();
+    
+    console.log(`Push to ${repository.full_name}/${branch}`);
+    console.log(`${commits.length} new commits`);
+    
+    // 触发 CI/CD
+    if (branch === 'main') {
+        await triggerDeployment(repository.full_name);
+    }
+}
+
+async function handlePullRequest(payload) {
+    const { action, pull_request } = payload;
+    
+    if (action === 'opened') {
+        // 自动添加标签
+        await addLabels(pull_request.number, ['needs-review']);
+        
+        // 运行检查
+        await runChecks(pull_request.head.sha);
+    }
+}
+
+async function handleIssue(payload) {
+    const { action, issue } = payload;
+    
+    if (action === 'opened') {
+        // 自动分类
+        const labels = classifyIssue(issue.title, issue.body);
+        if (labels.length > 0) {
+            await addLabels(issue.number, labels);
+        }
+    }
+}
+
+module.exports = router;
+            </div>
+        </div>
+
+        <h2>十一、最佳实践</h2>
+
+        <div class="success">
+            <h3>✅ 推荐做法</h3>
+            <ul>
+                <li><strong>快速响应：</strong>Webhook 处理应在 10 秒内完成</li>
+                <li><strong>异步处理：</strong>长时间任务应放入队列异步处理</li>
+                <li><strong>幂等性：</strong>相同事件多次处理应产生相同结果</li>
+                <li><strong>错误处理：</strong>妥善处理错误，避免数据丢失</li>
+                <li><strong>日志记录：</strong>记录所有接收到的事件</li>
+                <li><strong>监控告警：</strong>设置失败率监控</li>
+                <li><strong>重试机制：</strong>实现失败事件的重试</li>
+                <li><strong>安全验证：</strong>始终验证请求签名</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ 注意事项</h3>
+            <ul>
+                <li>不要在 Webhook 中执行耗时操作</li>
+                <li>敏感信息不要记录在日志中</li>
+                <li>及时返回响应，避免 GitHub 重试</li>
+                <li>考虑网络不稳定的情况</li>
+                <li>定期清理历史事件数据</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>📊 监控建议</h3>
+            <ul>
+                <li>监控 Webhook 接收成功率</li>
+                <li>跟踪各类事件的处理时间</li>
+                <li>设置异常事件告警</li>
+                <li>定期检查 GitHub 的 Recent Deliveries</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">🖨️ 打印本指南</button>
+            <button onclick="window.location.href='github-integration-guide.html'" style="background-color: #0366d6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-left: 10px;">📚 返回主指南</button>
+        </div>
+    </div>
+</body>
+</html>

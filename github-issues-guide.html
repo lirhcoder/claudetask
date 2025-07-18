@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Issues 管理功能操作指南</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #24292e;
+            border-bottom: 3px solid #0366d6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0366d6;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #586069;
+        }
+        .step {
+            background-color: #f6f8fa;
+            border-left: 4px solid #0366d6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .api-endpoint {
+            background-color: #1b1f23;
+            color: #e1e4e8;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .method {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .method-get { background-color: #28a745; color: white; }
+        .method-post { background-color: #0366d6; color: white; }
+        .method-put { background-color: #ffd33d; color: #24292e; }
+        .method-patch { background-color: #6f42c1; color: white; }
+        .method-delete { background-color: #d73a49; color: white; }
+        .code-block {
+            background-color: #f6f8fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: monospace;
+            border: 1px solid #e1e4e8;
+        }
+        .warning {
+            background-color: #fffbdd;
+            border: 1px solid #f0b849;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #dcffe4;
+            border: 1px solid #34d058;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .info {
+            background-color: #dfe7f3;
+            border: 1px solid #79b8ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .example {
+            background-color: #f0f9ff;
+            border: 1px solid #1890ff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f6f8fa;
+            font-weight: bold;
+        }
+        .label {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 2px;
+        }
+        .priority-high { background-color: #d73a49; color: white; }
+        .priority-medium { background-color: #ffd33d; color: #24292e; }
+        .priority-low { background-color: #28a745; color: white; }
+        .status-open { background-color: #28a745; color: white; }
+        .status-closed { background-color: #d73a49; color: white; }
+        .status-in-progress { background-color: #6f42c1; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐛 GitHub Issues 管理功能操作指南</h1>
+        
+        <div class="info">
+            <strong>📋 功能概述：</strong>
+            <ul>
+                <li>创建和管理项目议题（Issues）</li>
+                <li>分配优先级和标签</li>
+                <li>跟踪任务进度</li>
+                <li>协作和评论</li>
+                <li>与分支关联</li>
+            </ul>
+        </div>
+
+        <h2>一、Issues 系统概念</h2>
+
+        <div class="info">
+            <strong>💡 概念说明：</strong>
+            <p>在本系统中，Issues 被用作子任务管理单位：</p>
+            <ul>
+                <li><strong>Repository（仓库）</strong>：项目</li>
+                <li><strong>Branch（分支）</strong>：主任务</li>
+                <li><strong>Issue（议题）</strong>：子任务或问题</li>
+            </ul>
+        </div>
+
+        <h2>二、API 端点概览</h2>
+
+        <table>
+            <tr>
+                <th>功能</th>
+                <th>方法</th>
+                <th>端点</th>
+                <th>说明</th>
+            </tr>
+            <tr>
+                <td>列出议题</td>
+                <td><span class="method method-get">GET</span></td>
+                <td>/api/repos/{repo_id}/issues</td>
+                <td>获取仓库的所有议题</td>
+            </tr>
+            <tr>
+                <td>创建议题</td>
+                <td><span class="method method-post">POST</span></td>
+                <td>/api/repos/{repo_id}/issues</td>
+                <td>创建新议题</td>
+            </tr>
+            <tr>
+                <td>获取议题详情</td>
+                <td><span class="method method-get">GET</span></td>
+                <td>/api/issues/{issue_id}</td>
+                <td>获取单个议题信息</td>
+            </tr>
+            <tr>
+                <td>更新议题</td>
+                <td><span class="method method-patch">PATCH</span></td>
+                <td>/api/issues/{issue_id}</td>
+                <td>更新议题信息</td>
+            </tr>
+            <tr>
+                <td>关闭议题</td>
+                <td><span class="method method-put">PUT</span></td>
+                <td>/api/issues/{issue_id}/close</td>
+                <td>关闭议题</td>
+            </tr>
+            <tr>
+                <td>添加标签</td>
+                <td><span class="method method-post">POST</span></td>
+                <td>/api/issues/{issue_id}/labels</td>
+                <td>为议题添加标签</td>
+            </tr>
+        </table>
+
+        <h2>三、创建议题（Issue）</h2>
+
+        <div class="example">
+            <h3>场景 1：创建一个 Bug 报告</h3>
+            
+            <div class="step">
+                <h4>步骤 1：准备议题信息</h4>
+                <div class="api-endpoint">
+                    <span class="method method-post">POST</span> /api/repos/{repo_id}/issues
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "title": "登录页面在移动端显示异常",
+    "description": "## 问题描述\n在iPhone 12上访问登录页面时，输入框被键盘遮挡。\n\n## 重现步骤\n1. 使用iPhone访问登录页\n2. 点击用户名输入框\n3. 键盘弹出后遮挡了输入框\n\n## 期望行为\n页面应该自动上移，确保输入框可见",
+    "priority": "high",
+    "branch_id": "branch_123",
+    "labels": [
+        {"label": "bug", "color": "#d73a49"},
+        {"label": "mobile", "color": "#0366d6"}
+    ]
+}
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>步骤 2：成功响应</h4>
+                <div class="code-block">
+{
+    "message": "Issue created successfully",
+    "issue": {
+        "id": "issue_789",
+        "number": 42,
+        "title": "登录页面在移动端显示异常",
+        "description": "...",
+        "status": "open",
+        "priority": "high",
+        "created_by": "user_123",
+        "created_at": "2024-01-15T10:30:00Z",
+        "labels": [
+            {"label": "bug", "color": "#d73a49"},
+            {"label": "mobile", "color": "#0366d6"}
+        ]
+    }
+}
+                </div>
+            </div>
+        </div>
+
+        <div class="example">
+            <h3>场景 2：创建功能需求议题</h3>
+            
+            <div class="step">
+                <h4>创建功能议题</h4>
+                <div class="code-block">
+{
+    "title": "添加导出PDF功能",
+    "description": "## 功能描述\n用户需要能够将报表导出为PDF格式\n\n## 具体需求\n- 支持A4和Letter尺寸\n- 包含公司Logo\n- 支持中文字体\n- 可以选择导出范围",
+    "priority": "medium",
+    "branch_id": "branch_456",
+    "labels": [
+        {"label": "enhancement", "color": "#a2eeef"},
+        {"label": "feature", "color": "#7057ff"}
+    ]
+}
+                </div>
+            </div>
+        </div>
+
+        <h2>四、管理议题状态</h2>
+
+        <div class="example">
+            <h3>更新议题状态和信息</h3>
+            
+            <div class="step">
+                <h4>步骤 1：更新议题</h4>
+                <div class="api-endpoint">
+                    <span class="method method-patch">PATCH</span> /api/issues/{issue_id}
+                </div>
+                <p>请求体（只更新需要修改的字段）：</p>
+                <div class="code-block">
+{
+    "status": "in_progress",
+    "assignee": "user_456",
+    "priority": "urgent"
+}
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>步骤 2：关闭议题</h4>
+                <div class="api-endpoint">
+                    <span class="method method-put">PUT</span> /api/issues/{issue_id}/close
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "resolution": "fixed",
+    "comment": "问题已在 commit abc123 中修复"
+}
+                </div>
+            </div>
+        </div>
+
+        <h2>五、议题查询和过滤</h2>
+
+        <div class="example">
+            <h3>获取议题列表</h3>
+            
+            <div class="api-endpoint">
+                <span class="method method-get">GET</span> /api/repos/{repo_id}/issues?status=open&priority=high
+            </div>
+            
+            <p>支持的查询参数：</p>
+            <table>
+                <tr>
+                    <th>参数</th>
+                    <th>类型</th>
+                    <th>说明</th>
+                    <th>示例</th>
+                </tr>
+                <tr>
+                    <td>status</td>
+                    <td>string</td>
+                    <td>议题状态</td>
+                    <td>open, closed, in_progress</td>
+                </tr>
+                <tr>
+                    <td>priority</td>
+                    <td>string</td>
+                    <td>优先级</td>
+                    <td>low, medium, high, urgent</td>
+                </tr>
+                <tr>
+                    <td>assignee</td>
+                    <td>string</td>
+                    <td>负责人ID</td>
+                    <td>user_123</td>
+                </tr>
+                <tr>
+                    <td>labels</td>
+                    <td>string</td>
+                    <td>标签（逗号分隔）</td>
+                    <td>bug,urgent</td>
+                </tr>
+                <tr>
+                    <td>branch_id</td>
+                    <td>string</td>
+                    <td>关联的分支ID</td>
+                    <td>branch_456</td>
+                </tr>
+            </table>
+
+            <p>响应示例：</p>
+            <div class="code-block">
+{
+    "issues": [
+        {
+            "id": "issue_789",
+            "number": 42,
+            "title": "登录页面在移动端显示异常",
+            "status": "open",
+            "priority": "high",
+            "labels": [
+                {"label": "bug", "color": "#d73a49"},
+                {"label": "mobile", "color": "#0366d6"}
+            ],
+            "created_by": "user_123",
+            "created_by_email": "john@example.com",
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T14:20:00Z"
+        }
+    ],
+    "total": 15,
+    "page": 1,
+    "per_page": 20
+}
+            </div>
+        </div>
+
+        <h2>六、标签管理</h2>
+
+        <div class="example">
+            <h3>为议题添加标签</h3>
+            
+            <div class="step">
+                <h4>添加标签</h4>
+                <div class="api-endpoint">
+                    <span class="method method-post">POST</span> /api/issues/{issue_id}/labels
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "labels": [
+        {"label": "urgent", "color": "#d73a49"},
+        {"label": "help wanted", "color": "#008672"}
+    ]
+}
+                </div>
+            </div>
+
+            <div class="info">
+                <strong>🏷️ 常用标签建议：</strong>
+                <ul>
+                    <li><span class="label" style="background-color: #d73a49; color: white;">bug</span> - 缺陷</li>
+                    <li><span class="label" style="background-color: #0366d6; color: white;">enhancement</span> - 功能增强</li>
+                    <li><span class="label" style="background-color: #7057ff; color: white;">feature</span> - 新功能</li>
+                    <li><span class="label" style="background-color: #008672; color: white;">help wanted</span> - 需要帮助</li>
+                    <li><span class="label" style="background-color: #e4e669; color: #24292e;">documentation</span> - 文档</li>
+                    <li><span class="label" style="background-color: #d4c5f9; color: #24292e;">question</span> - 问题</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>七、完整工作流示例</h2>
+
+        <div class="success">
+            <h3>从发现问题到解决的完整流程</h3>
+            
+            <ol>
+                <li><strong>发现问题，创建议题</strong>
+                    <div class="code-block">
+POST /api/repos/repo_123/issues
+{
+    "title": "用户头像上传失败",
+    "description": "上传大于5MB的图片时返回500错误",
+    "priority": "high",
+    "labels": [{"label": "bug", "color": "#d73a49"}]
+}
+                    </div>
+                </li>
+                
+                <li><strong>分配给开发人员</strong>
+                    <div class="code-block">
+PATCH /api/issues/issue_789
+{
+    "assignee": "dev_user_456",
+    "status": "in_progress"
+}
+                    </div>
+                </li>
+                
+                <li><strong>添加更多信息</strong>
+                    <div class="code-block">
+POST /api/issues/issue_789/comments
+{
+    "comment": "经过调试发现是Nginx配置的问题，client_max_body_size设置太小"
+}
+                    </div>
+                </li>
+                
+                <li><strong>标记为已解决</strong>
+                    <div class="code-block">
+PUT /api/issues/issue_789/close
+{
+    "resolution": "fixed",
+    "comment": "已修改Nginx配置，现在支持最大20MB的文件上传"
+}
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <h2>八、议题优先级管理</h2>
+
+        <table>
+            <tr>
+                <th>优先级</th>
+                <th>标识</th>
+                <th>说明</th>
+                <th>响应时间</th>
+            </tr>
+            <tr>
+                <td><span class="label priority-high">Urgent</span></td>
+                <td>🔴</td>
+                <td>紧急问题，影响核心功能</td>
+                <td>立即处理</td>
+            </tr>
+            <tr>
+                <td><span class="label priority-high">High</span></td>
+                <td>🟠</td>
+                <td>重要问题，影响用户体验</td>
+                <td>24小时内</td>
+            </tr>
+            <tr>
+                <td><span class="label priority-medium">Medium</span></td>
+                <td>🟡</td>
+                <td>一般问题，不影响主要功能</td>
+                <td>一周内</td>
+            </tr>
+            <tr>
+                <td><span class="label priority-low">Low</span></td>
+                <td>🟢</td>
+                <td>小问题或改进建议</td>
+                <td>计划内</td>
+            </tr>
+        </table>
+
+        <h2>九、前端集成示例</h2>
+
+        <div class="example">
+            <h3>React 组件示例</h3>
+            <div class="code-block">
+import React, { useState } from 'react';
+
+function CreateIssue({ repoId, onSuccess }) {
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        priority: 'medium',
+        labels: []
+    });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        try {
+            const response = await fetch(`/api/repos/${repoId}/issues`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                onSuccess(data.issue);
+                // 清空表单
+                setFormData({
+                    title: '',
+                    description: '',
+                    priority: 'medium',
+                    labels: []
+                });
+            }
+        } catch (error) {
+            console.error('Failed to create issue:', error);
+        }
+    };
+
+    return (
+        &lt;form onSubmit={handleSubmit}&gt;
+            &lt;input
+                type="text"
+                placeholder="议题标题"
+                value={formData.title}
+                onChange={(e) =&gt; setFormData({...formData, title: e.target.value})}
+                required
+            /&gt;
+            
+            &lt;textarea
+                placeholder="详细描述..."
+                value={formData.description}
+                onChange={(e) =&gt; setFormData({...formData, description: e.target.value})}
+                rows={5}
+            /&gt;
+            
+            &lt;select
+                value={formData.priority}
+                onChange={(e) =&gt; setFormData({...formData, priority: e.target.value})}
+            &gt;
+                &lt;option value="low"&gt;低优先级&lt;/option&gt;
+                &lt;option value="medium"&gt;中优先级&lt;/option&gt;
+                &lt;option value="high"&gt;高优先级&lt;/option&gt;
+                &lt;option value="urgent"&gt;紧急&lt;/option&gt;
+            &lt;/select&gt;
+            
+            &lt;button type="submit"&gt;创建议题&lt;/button&gt;
+        &lt;/form&gt;
+    );
+}
+
+// 议题列表组件
+function IssueList({ repoId }) {
+    const [issues, setIssues] = useState([]);
+    const [filter, setFilter] = useState({ status: 'open' });
+
+    useEffect(() =&gt; {
+        fetchIssues();
+    }, [filter]);
+
+    const fetchIssues = async () =&gt; {
+        const query = new URLSearchParams(filter).toString();
+        const response = await fetch(`/api/repos/${repoId}/issues?${query}`);
+        const data = await response.json();
+        setIssues(data.issues);
+    };
+
+    return (
+        &lt;div&gt;
+            &lt;div className="filters"&gt;
+                &lt;select onChange={(e) =&gt; setFilter({...filter, status: e.target.value})}&gt;
+                    &lt;option value="open"&gt;开放的议题&lt;/option&gt;
+                    &lt;option value="closed"&gt;已关闭的议题&lt;/option&gt;
+                    &lt;option value="all"&gt;所有议题&lt;/option&gt;
+                &lt;/select&gt;
+            &lt;/div&gt;
+            
+            &lt;div className="issue-list"&gt;
+                {issues.map(issue =&gt; (
+                    &lt;div key={issue.id} className="issue-item"&gt;
+                        &lt;h3&gt;#{issue.number} {issue.title}&lt;/h3&gt;
+                        &lt;div className="labels"&gt;
+                            {issue.labels.map(label =&gt; (
+                                &lt;span
+                                    key={label.label}
+                                    className="label"
+                                    style={{backgroundColor: label.color}}
+                                &gt;
+                                    {label.label}
+                                &lt;/span&gt;
+                            ))}
+                        &lt;/div&gt;
+                        &lt;div className="meta"&gt;
+                            由 {issue.created_by_email} 创建于 {new Date(issue.created_at).toLocaleDateString()}
+                        &lt;/div&gt;
+                    &lt;/div&gt;
+                ))}
+            &lt;/div&gt;
+        &lt;/div&gt;
+    );
+}
+            </div>
+        </div>
+
+        <h2>十、最佳实践</h2>
+
+        <div class="success">
+            <h3>✅ 推荐做法</h3>
+            <ul>
+                <li><strong>标题清晰：</strong>使用简洁明了的标题描述问题</li>
+                <li><strong>详细描述：</strong>提供重现步骤、期望行为和实际行为</li>
+                <li><strong>合理分类：</strong>使用标签和优先级帮助团队管理</li>
+                <li><strong>及时更新：</strong>状态变化时及时更新议题</li>
+                <li><strong>避免重复：</strong>创建前先搜索是否已有类似议题</li>
+                <li><strong>使用模板：</strong>为不同类型的议题创建模板</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ 注意事项</h3>
+            <ul>
+                <li>不要在议题中包含敏感信息（密码、密钥等）</li>
+                <li>大型文件应该使用链接而不是直接粘贴</li>
+                <li>保持讨论专注于问题本身</li>
+                <li>关闭议题时说明解决方案</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">🖨️ 打印本指南</button>
+            <button onclick="window.location.href='github-integration-guide.html'" style="background-color: #0366d6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-left: 10px;">📚 返回主指南</button>
+        </div>
+    </div>
+</body>
+</html>

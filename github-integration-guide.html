@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 集成操作指南</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #24292e;
+            border-bottom: 3px solid #0366d6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0366d6;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #586069;
+        }
+        .step {
+            background-color: #f6f8fa;
+            border-left: 4px solid #0366d6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .example {
+            background-color: #f0f9ff;
+            border: 1px solid #1890ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .warning {
+            background-color: #fffbe6;
+            border: 1px solid #faad14;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #f6ffed;
+            border: 1px solid #52c41a;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        code {
+            background-color: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        pre {
+            background-color: #f6f8fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            background-color: #0366d6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0256c7;
+        }
+        .icon {
+            display: inline-block;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 GitHub 集成操作指南</h1>
+        
+        <div class="success">
+            <strong>📌 提示：</strong>本指南将帮助您快速完成 GitHub 与您的应用程序的集成，让您可以轻松管理代码仓库和协作开发。
+        </div>
+
+        <h2>一、准备工作</h2>
+        
+        <div class="step">
+            <h3>步骤 1：注册 GitHub 账号</h3>
+            <p>如果您还没有 GitHub 账号，请访问 <a href="https://github.com" target="_blank">github.com</a> 注册一个免费账号。</p>
+        </div>
+
+        <div class="step">
+            <h3>步骤 2：创建个人访问令牌（Personal Access Token）</h3>
+            <ol>
+                <li>登录 GitHub 后，点击右上角头像 → Settings（设置）</li>
+                <li>在左侧菜单中找到 Developer settings（开发者设置）</li>
+                <li>选择 Personal access tokens → Tokens (classic)</li>
+                <li>点击 Generate new token（生成新令牌）</li>
+                <li>给令牌起个名字，例如：<code>我的应用集成</code></li>
+                <li>选择需要的权限（至少需要 <code>repo</code> 权限）</li>
+                <li>点击生成，<strong>请立即复制并保存令牌</strong>（只会显示一次！）</li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ 重要提醒：</strong>个人访问令牌相当于您的密码，请妥善保管，不要分享给他人或提交到公开的代码仓库中。
+        </div>
+
+        <h2>二、集成步骤</h2>
+
+        <div class="step">
+            <h3>步骤 1：配置 GitHub 集成</h3>
+            <p>在您的应用程序中找到 GitHub 集成设置页面，通常在：</p>
+            <ul>
+                <li>设置 → 集成 → GitHub</li>
+                <li>或者：工具 → 版本控制 → GitHub</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>步骤 2：输入认证信息</h3>
+            <p>在集成页面中输入以下信息：</p>
+            <ul>
+                <li><strong>GitHub 用户名：</strong>您的 GitHub 账号用户名</li>
+                <li><strong>访问令牌：</strong>刚才生成的个人访问令牌</li>
+                <li><strong>默认分支：</strong>通常是 <code>main</code> 或 <code>master</code></li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>步骤 3：测试连接</h3>
+            <p>点击"测试连接"按钮，确保配置正确。如果显示"连接成功"，说明配置正确。</p>
+        </div>
+
+        <h2>三、具体操作示例</h2>
+
+        <div class="example">
+            <h3>示例 1：克隆远程仓库</h3>
+            <p><strong>场景：</strong>您想要将 GitHub 上的项目下载到本地进行开发。</p>
+            <pre><code>仓库地址：https://github.com/username/my-project.git
+
+操作步骤：
+1. 在应用中选择"克隆仓库"
+2. 输入仓库地址
+3. 选择本地保存路径
+4. 点击"克隆"按钮</code></pre>
+            <p><strong>结果：</strong>项目代码将被下载到您指定的本地文件夹。</p>
+        </div>
+
+        <div class="example">
+            <h3>示例 2：创建新仓库</h3>
+            <p><strong>场景：</strong>您有一个本地项目，想要上传到 GitHub。</p>
+            <pre><code>项目名称：my-awesome-app
+项目描述：一个很棒的应用程序
+
+操作步骤：
+1. 在应用中选择"创建新仓库"
+2. 填写仓库名称：my-awesome-app
+3. 添加描述（可选）
+4. 选择公开或私有
+5. 点击"创建"按钮</code></pre>
+            <p><strong>结果：</strong>GitHub 上将创建一个新的仓库，并自动与本地项目关联。</p>
+        </div>
+
+        <div class="example">
+            <h3>示例 3：提交代码更改</h3>
+            <p><strong>场景：</strong>您修改了代码，想要保存到 GitHub。</p>
+            <pre><code>修改的文件：
+- src/index.js (修改了登录功能)
+- styles/main.css (更新了样式)
+
+操作步骤：
+1. 在应用中查看"更改"列表
+2. 选择要提交的文件
+3. 输入提交信息：
+   "修复登录功能并更新界面样式"
+4. 点击"提交"按钮
+5. 点击"推送"将更改上传到 GitHub</code></pre>
+            <p><strong>结果：</strong>您的代码更改将被保存并上传到 GitHub 仓库。</p>
+        </div>
+
+        <div class="example">
+            <h3>示例 4：创建分支进行功能开发</h3>
+            <p><strong>场景：</strong>您要开发一个新功能，但不想影响主分支。</p>
+            <pre><code>新功能：添加用户评论功能
+分支名称：feature/user-comments
+
+操作步骤：
+1. 在应用中选择"分支管理"
+2. 点击"创建新分支"
+3. 输入分支名称：feature/user-comments
+4. 选择基于 main 分支创建
+5. 切换到新分支进行开发</code></pre>
+            <p><strong>结果：</strong>您可以在新分支上安全地开发新功能，不会影响主分支的稳定性。</p>
+        </div>
+
+        <div class="example">
+            <h3>示例 5：合并代码（Pull Request）</h3>
+            <p><strong>场景：</strong>新功能开发完成，需要合并到主分支。</p>
+            <pre><code>源分支：feature/user-comments
+目标分支：main
+
+操作步骤：
+1. 确保所有更改已提交并推送
+2. 在应用中选择"创建合并请求"
+3. 选择源分支和目标分支
+4. 填写合并请求标题和描述：
+   标题："添加用户评论功能"
+   描述："实现了用户可以在文章下方发表评论的功能"
+5. 提交合并请求
+6. 等待代码审查（如果需要）
+7. 合并到主分支</code></pre>
+            <p><strong>结果：</strong>新功能将被合并到主分支，所有人都可以使用。</p>
+        </div>
+
+        <h2>四、常见问题解决</h2>
+
+        <div class="warning">
+            <h3>问题 1：认证失败</h3>
+            <p><strong>症状：</strong>提示"认证失败"或"无效的令牌"</p>
+            <p><strong>解决方案：</strong></p>
+            <ul>
+                <li>检查个人访问令牌是否正确复制（没有多余的空格）</li>
+                <li>确认令牌没有过期</li>
+                <li>验证令牌具有所需的权限</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>问题 2：推送失败</h3>
+            <p><strong>症状：</strong>提示"推送被拒绝"</p>
+            <p><strong>解决方案：</strong></p>
+            <ul>
+                <li>先拉取（pull）最新代码，解决冲突后再推送</li>
+                <li>检查是否有写入权限</li>
+                <li>确认分支保护规则是否允许直接推送</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>问题 3：合并冲突</h3>
+            <p><strong>症状：</strong>提示"存在合并冲突"</p>
+            <p><strong>解决方案：</strong></p>
+            <ul>
+                <li>在应用中查看冲突文件</li>
+                <li>手动编辑解决冲突</li>
+                <li>标记冲突已解决</li>
+                <li>提交合并结果</li>
+            </ul>
+        </div>
+
+        <h2>五、最佳实践建议</h2>
+
+        <div class="success">
+            <h3>✅ 推荐做法</h3>
+            <ul>
+                <li><strong>频繁提交：</strong>每完成一个小功能就提交，不要积累太多更改</li>
+                <li><strong>清晰的提交信息：</strong>用简洁明了的语言描述做了什么更改</li>
+                <li><strong>使用分支：</strong>新功能和修复都在独立分支上进行</li>
+                <li><strong>代码审查：</strong>重要更改提交前请同事审查</li>
+                <li><strong>定期同步：</strong>经常拉取最新代码，避免大量冲突</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>提交信息模板</h3>
+            <pre><code>类型: 简短描述
+
+详细说明（可选）
+
+示例：
+feat: 添加用户登录功能
+fix: 修复页面加载错误
+docs: 更新 README 文档
+style: 优化代码格式
+refactor: 重构支付模块</code></pre>
+        </div>
+
+        <h2>六、快速参考</h2>
+
+        <div class="example">
+            <h3>常用 Git 命令对照</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f6f8fa;">
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">操作</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">命令行</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">图形界面操作</th>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">克隆仓库</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><code>git clone [url]</code></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">文件 → 克隆仓库</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">查看状态</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><code>git status</code></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">查看"更改"面板</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">添加文件</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><code>git add .</code></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">勾选要提交的文件</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">提交更改</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><code>git commit -m "信息"</code></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">输入信息 → 提交</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">推送到远程</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><code>git push</code></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">点击"推送"按钮</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">拉取更新</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><code>git pull</code></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">点击"拉取"按钮</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="success">
+            <h3>🎉 恭喜！</h3>
+            <p>您已经掌握了 GitHub 集成的基本操作。现在可以开始享受版本控制带来的便利了！</p>
+            <p>如有更多问题，请参考 <a href="https://docs.github.com/cn" target="_blank">GitHub 官方文档</a> 或联系技术支持。</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print()">🖨️ 打印本指南</button>
+            <button onclick="window.scrollTo(0, 0)">⬆️ 返回顶部</button>
+        </div>
+    </div>
+
+    <script>
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

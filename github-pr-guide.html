@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Pull Request 管理功能操作指南</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #24292e;
+            border-bottom: 3px solid #0366d6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0366d6;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #586069;
+        }
+        .step {
+            background-color: #f6f8fa;
+            border-left: 4px solid #0366d6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .api-endpoint {
+            background-color: #1b1f23;
+            color: #e1e4e8;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .method {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .method-get { background-color: #28a745; color: white; }
+        .method-post { background-color: #0366d6; color: white; }
+        .method-put { background-color: #ffd33d; color: #24292e; }
+        .method-patch { background-color: #6f42c1; color: white; }
+        .method-delete { background-color: #d73a49; color: white; }
+        .code-block {
+            background-color: #f6f8fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: monospace;
+            border: 1px solid #e1e4e8;
+        }
+        .warning {
+            background-color: #fffbdd;
+            border: 1px solid #f0b849;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #dcffe4;
+            border: 1px solid #34d058;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .info {
+            background-color: #dfe7f3;
+            border: 1px solid #79b8ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .example {
+            background-color: #f0f9ff;
+            border: 1px solid #1890ff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f6f8fa;
+            font-weight: bold;
+        }
+        .pr-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-open { background-color: #28a745; color: white; }
+        .status-closed { background-color: #d73a49; color: white; }
+        .status-merged { background-color: #6f42c1; color: white; }
+        .status-draft { background-color: #6a737d; color: white; }
+        .flow-diagram {
+            background-color: #f6f8fa;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .flow-step {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0366d6;
+            color: white;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .flow-arrow {
+            display: inline-block;
+            margin: 0 10px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔀 GitHub Pull Request 管理功能操作指南</h1>
+        
+        <div class="info">
+            <strong>📋 功能概述：</strong>
+            <ul>
+                <li>创建 Pull Request（PR）</li>
+                <li>代码审查流程</li>
+                <li>合并策略管理</li>
+                <li>PR 状态跟踪</li>
+                <li>自动化 PR 创建</li>
+            </ul>
+        </div>
+
+        <h2>一、Pull Request 工作流程</h2>
+
+        <div class="flow-diagram">
+            <span class="flow-step">创建分支</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">开发功能</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">提交代码</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">创建 PR</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">代码审查</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">合并</span>
+        </div>
+
+        <h2>二、API 端点概览</h2>
+
+        <table>
+            <tr>
+                <th>功能</th>
+                <th>方法</th>
+                <th>端点</th>
+                <th>说明</th>
+            </tr>
+            <tr>
+                <td>创建 PR</td>
+                <td><span class="method method-post">POST</span></td>
+                <td>/api/repos/{repo_id}/pulls</td>
+                <td>创建新的 Pull Request</td>
+            </tr>
+            <tr>
+                <td>列出 PR</td>
+                <td><span class="method method-get">GET</span></td>
+                <td>/api/repos/{repo_id}/pulls</td>
+                <td>获取仓库的所有 PR</td>
+            </tr>
+            <tr>
+                <td>获取 PR 详情</td>
+                <td><span class="method method-get">GET</span></td>
+                <td>/api/pulls/{pr_id}</td>
+                <td>获取单个 PR 信息</td>
+            </tr>
+            <tr>
+                <td>更新 PR</td>
+                <td><span class="method method-patch">PATCH</span></td>
+                <td>/api/pulls/{pr_id}</td>
+                <td>更新 PR 信息</td>
+            </tr>
+            <tr>
+                <td>合并 PR</td>
+                <td><span class="method method-put">PUT</span></td>
+                <td>/api/pulls/{pr_id}/merge</td>
+                <td>合并 Pull Request</td>
+            </tr>
+            <tr>
+                <td>添加评论</td>
+                <td><span class="method method-post">POST</span></td>
+                <td>/api/pulls/{pr_id}/comments</td>
+                <td>添加审查评论</td>
+            </tr>
+        </table>
+
+        <h2>三、创建 Pull Request</h2>
+
+        <div class="example">
+            <h3>场景 1：功能开发完成后创建 PR</h3>
+            
+            <div class="step">
+                <h4>步骤 1：准备 PR 信息</h4>
+                <div class="api-endpoint">
+                    <span class="method method-post">POST</span> /api/repos/{repo_id}/pulls
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "title": "添加用户认证功能",
+    "body": "## 变更说明\n\n本 PR 实现了完整的用户认证系统：\n\n### 新增功能\n- ✅ 用户注册\n- ✅ 用户登录\n- ✅ JWT Token 认证\n- ✅ 密码重置功能\n\n### 技术细节\n- 使用 bcrypt 加密密码\n- JWT Token 有效期 24 小时\n- 支持邮箱验证\n\n### 测试\n- 单元测试覆盖率：85%\n- 集成测试：全部通过\n\n### 相关 Issue\nCloses #42, #43",
+    "head": "feature/user-authentication",
+    "base": "main",
+    "draft": false
+}
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>步骤 2：成功响应</h4>
+                <div class="code-block">
+{
+    "message": "Pull request created successfully",
+    "pull_request": {
+        "id": "pr_123",
+        "number": 15,
+        "title": "添加用户认证功能",
+        "status": "open",
+        "head": "feature/user-authentication",
+        "base": "main",
+        "created_by": "user_123",
+        "created_at": "2024-01-15T10:30:00Z",
+        "html_url": "https://github.com/myteam/project/pull/15"
+    }
+}
+                </div>
+            </div>
+        </div>
+
+        <div class="example">
+            <h3>场景 2：自动化 PR 创建（AI 辅助）</h3>
+            
+            <div class="step">
+                <h4>通过统一 API 创建并执行任务</h4>
+                <div class="api-endpoint">
+                    <span class="method method-post">POST</span> /api/unified/create-and-execute
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "repo_id": "repo_123",
+    "task": {
+        "title": "修复移动端布局问题",
+        "description": "修复在 iPhone 12 上的显示问题",
+        "prompt": "修复登录页面在移动端的布局问题，确保输入框不被键盘遮挡",
+        "auto_commit": true,
+        "auto_pr": true
+    }
+}
+                </div>
+                <p>系统会自动：</p>
+                <ul>
+                    <li>创建新分支</li>
+                    <li>使用 AI 生成修复代码</li>
+                    <li>提交更改</li>
+                    <li>创建 Pull Request</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>四、Pull Request 审查流程</h2>
+
+        <div class="example">
+            <h3>代码审查操作</h3>
+            
+            <div class="step">
+                <h4>步骤 1：添加审查评论</h4>
+                <div class="api-endpoint">
+                    <span class="method method-post">POST</span> /api/pulls/{pr_id}/comments
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "comment": "代码质量很好！但有几个小建议：\n1. 考虑添加输入验证\n2. 错误消息可以更友好一些",
+    "path": "src/auth/login.js",
+    "line": 42,
+    "side": "RIGHT"
+}
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>步骤 2：批准或请求更改</h4>
+                <div class="api-endpoint">
+                    <span class="method method-post">POST</span> /api/pulls/{pr_id}/reviews
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "review_type": "APPROVE",  // 可选: APPROVE, REQUEST_CHANGES, COMMENT
+    "comment": "LGTM! 代码质量很好，测试覆盖完整。"
+}
+                </div>
+            </div>
+        </div>
+
+        <h2>五、合并 Pull Request</h2>
+
+        <div class="example">
+            <h3>不同的合并策略</h3>
+            
+            <div class="step">
+                <h4>合并 PR</h4>
+                <div class="api-endpoint">
+                    <span class="method method-put">PUT</span> /api/pulls/{pr_id}/merge
+                </div>
+                <p>请求体：</p>
+                <div class="code-block">
+{
+    "merge_method": "squash",  // 可选: merge, squash, rebase
+    "commit_title": "feat: 添加用户认证功能 (#15)",
+    "commit_message": "实现完整的用户认证系统，包括注册、登录、JWT认证和密码重置功能",
+    "delete_branch": true
+}
+                </div>
+            </div>
+
+            <div class="info">
+                <strong>🔀 合并策略说明：</strong>
+                <ul>
+                    <li><strong>merge：</strong>创建合并提交，保留完整的提交历史</li>
+                    <li><strong>squash：</strong>将所有提交压缩成一个提交</li>
+                    <li><strong>rebase：</strong>将提交重新应用到基础分支上</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>六、查询和过滤 PR</h2>
+
+        <div class="example">
+            <h3>获取 PR 列表</h3>
+            
+            <div class="api-endpoint">
+                <span class="method method-get">GET</span> /api/repos/{repo_id}/pulls?status=open&author=user_123
+            </div>
+            
+            <p>支持的查询参数：</p>
+            <table>
+                <tr>
+                    <th>参数</th>
+                    <th>类型</th>
+                    <th>说明</th>
+                    <th>示例</th>
+                </tr>
+                <tr>
+                    <td>status</td>
+                    <td>string</td>
+                    <td>PR 状态</td>
+                    <td>open, closed, merged, all</td>
+                </tr>
+                <tr>
+                    <td>author</td>
+                    <td>string</td>
+                    <td>作者 ID</td>
+                    <td>user_123</td>
+                </tr>
+                <tr>
+                    <td>base</td>
+                    <td>string</td>
+                    <td>目标分支</td>
+                    <td>main, develop</td>
+                </tr>
+                <tr>
+                    <td>head</td>
+                    <td>string</td>
+                    <td>源分支</td>
+                    <td>feature/login</td>
+                </tr>
+                <tr>
+                    <td>sort</td>
+                    <td>string</td>
+                    <td>排序方式</td>
+                    <td>created, updated, comments</td>
+                </tr>
+            </table>
+
+            <p>响应示例：</p>
+            <div class="code-block">
+{
+    "pull_requests": [
+        {
+            "id": "pr_123",
+            "number": 15,
+            "title": "添加用户认证功能",
+            "status": "open",
+            "head": "feature/user-authentication",
+            "base": "main",
+            "author": {
+                "id": "user_123",
+                "name": "张三",
+                "email": "zhangsan@example.com"
+            },
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T14:20:00Z",
+            "comments_count": 5,
+            "reviews": [
+                {
+                    "reviewer": "user_456",
+                    "state": "APPROVED",
+                    "submitted_at": "2024-01-15T15:00:00Z"
+                }
+            ],
+            "mergeable": true,
+            "draft": false
+        }
+    ],
+    "total": 23,
+    "page": 1,
+    "per_page": 20
+}
+            </div>
+        </div>
+
+        <h2>七、PR 模板和自动化</h2>
+
+        <div class="example">
+            <h3>PR 模板示例</h3>
+            <div class="code-block">
+## 变更类型
+- [ ] 🐛 Bug 修复
+- [ ] ✨ 新功能
+- [ ] 📝 文档更新
+- [ ] 🎨 样式调整
+- [ ] ♻️ 代码重构
+- [ ] ⚡ 性能优化
+
+## 描述
+简要描述这个 PR 的目的和所做的更改。
+
+## 相关 Issue
+Closes #(issue number)
+
+## 测试
+- [ ] 我已经测试了这些更改
+- [ ] 所有测试都通过了
+- [ ] 我添加了新的测试用例
+
+## 截图（如果适用）
+如果有 UI 更改，请添加前后对比截图。
+
+## 检查清单
+- [ ] 代码遵循项目规范
+- [ ] 自己审查了代码
+- [ ] 更新了相关文档
+- [ ] 没有引入新的警告
+            </div>
+        </div>
+
+        <h2>八、完整工作流示例</h2>
+
+        <div class="success">
+            <h3>从开发到合并的完整流程</h3>
+            
+            <ol>
+                <li><strong>创建功能分支</strong>
+                    <div class="code-block">
+POST /api/repos/repo_123/branches
+{
+    "name": "feature/dark-mode",
+    "description": "实现深色模式"
+}
+                    </div>
+                </li>
+                
+                <li><strong>AI 辅助开发</strong>
+                    <div class="code-block">
+POST /api/branches/branch_456/execute
+{
+    "prompt": "实现深色模式切换功能，支持系统偏好设置"
+}
+                    </div>
+                </li>
+                
+                <li><strong>创建 Pull Request</strong>
+                    <div class="code-block">
+POST /api/repos/repo_123/pulls
+{
+    "title": "feat: 添加深色模式支持",
+    "body": "实现了深色模式功能...",
+    "head": "feature/dark-mode",
+    "base": "main"
+}
+                    </div>
+                </li>
+                
+                <li><strong>代码审查</strong>
+                    <div class="code-block">
+POST /api/pulls/pr_123/reviews
+{
+    "review_type": "APPROVE",
+    "comment": "代码实现很棒！"
+}
+                    </div>
+                </li>
+                
+                <li><strong>合并到主分支</strong>
+                    <div class="code-block">
+PUT /api/pulls/pr_123/merge
+{
+    "merge_method": "squash",
+    "delete_branch": true
+}
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <h2>九、PR 状态说明</h2>
+
+        <table>
+            <tr>
+                <th>状态</th>
+                <th>标识</th>
+                <th>说明</th>
+                <th>可执行操作</th>
+            </tr>
+            <tr>
+                <td><span class="pr-status status-draft">Draft</span></td>
+                <td>📝</td>
+                <td>草稿状态，还在开发中</td>
+                <td>继续开发、转为正式 PR</td>
+            </tr>
+            <tr>
+                <td><span class="pr-status status-open">Open</span></td>
+                <td>🟢</td>
+                <td>开放状态，等待审查</td>
+                <td>审查、评论、合并、关闭</td>
+            </tr>
+            <tr>
+                <td><span class="pr-status status-merged">Merged</span></td>
+                <td>🟣</td>
+                <td>已合并到目标分支</td>
+                <td>查看历史</td>
+            </tr>
+            <tr>
+                <td><span class="pr-status status-closed">Closed</span></td>
+                <td>🔴</td>
+                <td>已关闭，未合并</td>
+                <td>重新打开、查看历史</td>
+            </tr>
+        </table>
+
+        <h2>十、前端集成示例</h2>
+
+        <div class="example">
+            <h3>Vue.js 组件示例</h3>
+            <div class="code-block">
+&lt;template&gt;
+  &lt;div class="pr-manager"&gt;
+    &lt;h2&gt;Pull Requests&lt;/h2&gt;
+    
+    &lt;!-- PR 列表 --&gt;
+    &lt;div class="pr-list"&gt;
+      &lt;div v-for="pr in pullRequests" :key="pr.id" class="pr-item"&gt;
+        &lt;div class="pr-header"&gt;
+          &lt;span class="pr-number"&gt;#{{ pr.number }}&lt;/span&gt;
+          &lt;h3&gt;{{ pr.title }}&lt;/h3&gt;
+          &lt;span :class="['pr-status', `status-${pr.status}`]"&gt;
+            {{ pr.status }}
+          &lt;/span&gt;
+        &lt;/div&gt;
+        
+        &lt;div class="pr-meta"&gt;
+          &lt;span&gt;{{ pr.author.name }} 想要合并 &lt;/span&gt;
+          &lt;code&gt;{{ pr.head }}&lt;/code&gt;
+          &lt;span&gt; 到 &lt;/span&gt;
+          &lt;code&gt;{{ pr.base }}&lt;/code&gt;
+        &lt;/div&gt;
+        
+        &lt;div class="pr-actions"&gt;
+          &lt;button @click="reviewPR(pr.id)" v-if="pr.status === 'open'"&gt;
+            审查
+          &lt;/button&gt;
+          &lt;button @click="mergePR(pr.id)" v-if="canMerge(pr)"&gt;
+            合并
+          &lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    
+    &lt;!-- 创建 PR 表单 --&gt;
+    &lt;div class="create-pr-form" v-if="showCreateForm"&gt;
+      &lt;h3&gt;创建 Pull Request&lt;/h3&gt;
+      &lt;form @submit.prevent="createPR"&gt;
+        &lt;input v-model="newPR.title" placeholder="PR 标题" required&gt;
+        &lt;textarea v-model="newPR.body" placeholder="描述..." rows="5"&gt;&lt;/textarea&gt;
+        
+        &lt;select v-model="newPR.head"&gt;
+          &lt;option v-for="branch in branches" :value="branch.name"&gt;
+            {{ branch.name }}
+          &lt;/option&gt;
+        &lt;/select&gt;
+        
+        &lt;button type="submit"&gt;创建 PR&lt;/button&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script&gt;
+export default {
+  data() {
+    return {
+      pullRequests: [],
+      branches: [],
+      showCreateForm: false,
+      newPR: {
+        title: '',
+        body: '',
+        head: '',
+        base: 'main'
+      }
+    };
+  },
+  
+  methods: {
+    async fetchPRs() {
+      const response = await fetch(`/api/repos/${this.repoId}/pulls`);
+      const data = await response.json();
+      this.pullRequests = data.pull_requests;
+    },
+    
+    async createPR() {
+      try {
+        const response = await fetch(`/api/repos/${this.repoId}/pulls`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.newPR)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          this.$emit('pr-created', data.pull_request);
+          this.showCreateForm = false;
+          this.fetchPRs();
+        }
+      } catch (error) {
+        console.error('Failed to create PR:', error);
+      }
+    },
+    
+    async mergePR(prId) {
+      if (!confirm('确定要合并这个 Pull Request 吗？')) return;
+      
+      try {
+        const response = await fetch(`/api/pulls/${prId}/merge`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merge_method: 'squash',
+            delete_branch: true
+          })
+        });
+        
+        if (response.ok) {
+          this.$message.success('PR 合并成功！');
+          this.fetchPRs();
+        }
+      } catch (error) {
+        console.error('Failed to merge PR:', error);
+      }
+    },
+    
+    canMerge(pr) {
+      return pr.status === 'open' && 
+             pr.mergeable && 
+             pr.reviews.some(r =&gt; r.state === 'APPROVED');
+    }
+  },
+  
+  mounted() {
+    this.fetchPRs();
+  }
+};
+&lt;/script&gt;
+            </div>
+        </div>
+
+        <h2>十一、最佳实践</h2>
+
+        <div class="success">
+            <h3>✅ 推荐做法</h3>
+            <ul>
+                <li><strong>小而专注：</strong>每个 PR 只解决一个问题或实现一个功能</li>
+                <li><strong>清晰的标题：</strong>使用约定式提交格式（feat:, fix:, docs: 等）</li>
+                <li><strong>详细描述：</strong>说明改动的原因、方法和影响</li>
+                <li><strong>及时更新：</strong>根据审查意见及时更新代码</li>
+                <li><strong>测试完整：</strong>确保所有测试通过后再创建 PR</li>
+                <li><strong>保持同步：</strong>定期将基础分支的更新合并到功能分支</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ 注意事项</h3>
+            <ul>
+                <li>避免在一个 PR 中包含多个不相关的更改</li>
+                <li>不要强制推送到已有审查的分支</li>
+                <li>合并前确保所有 CI/CD 检查通过</li>
+                <li>敏感信息不要提交到 PR 中</li>
+                <li>大型重构应该提前与团队讨论</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🚀 自动化提示</h3>
+            <p>可以通过以下方式提高 PR 管理效率：</p>
+            <ul>
+                <li>设置 PR 模板</li>
+                <li>配置自动化检查（linting, testing）</li>
+                <li>使用标签自动分类</li>
+                <li>设置自动合并规则</li>
+                <li>集成代码质量工具</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">🖨️ 打印本指南</button>
+            <button onclick="window.location.href='github-integration-guide.html'" style="background-color: #0366d6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-left: 10px;">📚 返回主指南</button>
+        </div>
+    </div>
+</body>
+</html>

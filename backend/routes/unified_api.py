@@ -135,22 +135,34 @@ class UnifiedWorkflow:
     
     def _get_repo_path(self, repo):
         """获取仓库路径"""
-        if repo.get('github_url'):
-            return Path('repos') / repo['id']
+        # 如果是 Repository 对象，先转换为字典
+        if hasattr(repo, 'to_dict'):
+            repo_dict = repo.to_dict()
         else:
-            return Path('projects') / repo['project_id']
+            repo_dict = repo
+            
+        if repo_dict.get('github_url'):
+            return Path('repos') / repo_dict['id']
+        else:
+            return Path('projects') / repo_dict.get('project_id', repo_dict['id'])
     
     def _create_pull_request(self, repo, branch, task_data):
         """创建 Pull Request"""
         try:
+            # 如果是 Repository 对象，先转换为字典
+            if hasattr(repo, 'to_dict'):
+                repo_dict = repo.to_dict()
+            else:
+                repo_dict = repo
+                
             # 如果是 GitHub 仓库，使用 GitHub API
-            if repo.get('github_url'):
+            if repo_dict.get('github_url'):
                 # TODO: 实现 GitHub PR 创建
                 pass
             else:
                 # 本地仓库，创建 PR 记录
                 pr_data = {
-                    'repository_id': repo['id'],
+                    'repository_id': repo_dict['id'],
                     'branch_id': branch['id'],
                     'title': f"Complete: {task_data['title']}",
                     'description': task_data.get('description', ''),
@@ -284,8 +296,10 @@ def unified_dashboard():
     user_id = session.get('user_id')
     
     # 获取用户的活跃仓库
-    repos = workflow.repo_manager.list_repositories()
-    active_repos = sorted(repos, key=lambda x: x.get('updated_at', ''), reverse=True)[:5]
+    repos = workflow.repo_manager.list_repositories(user_id)
+    # 将 Repository 对象转换为字典
+    repo_dicts = [repo.to_dict() for repo in repos]
+    active_repos = sorted(repo_dicts, key=lambda x: x.get('updated_at', ''), reverse=True)[:5]
     
     # 获取最近的任务（分支）
     recent_tasks = []
@@ -303,7 +317,7 @@ def unified_dashboard():
     
     # 统计信息
     stats = {
-        'total_repos': len(repos),
+        'total_repos': len(repo_dicts),
         'active_tasks': sum(1 for t in recent_tasks if t['status'] == 'in_progress'),
         'completed_today': sum(1 for t in recent_tasks 
                               if t['status'] == 'completed' 

@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 集成功能测试清单</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #24292e;
+            border-bottom: 3px solid #0366d6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0366d6;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #586069;
+        }
+        .test-section {
+            background-color: #f6f8fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-item {
+            background-color: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .test-status {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-radius: 3px;
+            margin-right: 10px;
+            vertical-align: middle;
+            cursor: pointer;
+        }
+        .test-status.passed {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .test-status.failed {
+            background-color: #d73a49;
+            border-color: #d73a49;
+        }
+        .test-status.pending {
+            background-color: #ffd33d;
+            border-color: #ffd33d;
+        }
+        .priority {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .priority-high { background-color: #d73a49; color: white; }
+        .priority-medium { background-color: #ffd33d; color: #24292e; }
+        .priority-low { background-color: #28a745; color: white; }
+        .test-steps {
+            background-color: #f6f8fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .test-steps ol {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        .command {
+            background-color: #1b1f23;
+            color: #e1e4e8;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .expected-result {
+            background-color: #dcffe4;
+            border: 1px solid #34d058;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .warning {
+            background-color: #fffbdd;
+            border: 1px solid #f0b849;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .info {
+            background-color: #dfe7f3;
+            border: 1px solid #79b8ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .progress-bar {
+            background-color: #e1e4e8;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress {
+            background-color: #28a745;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .summary-card {
+            display: inline-block;
+            background-color: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 10px;
+            text-align: center;
+            min-width: 150px;
+        }
+        .summary-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #0366d6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f6f8fa;
+            font-weight: bold;
+        }
+        .test-data {
+            background-color: #f0f9ff;
+            border: 1px solid #1890ff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            .test-status {
+                border-color: black !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ GitHub 集成功能测试清单</h1>
+        
+        <div class="info">
+            <strong>📋 测试说明：</strong>
+            <ul>
+                <li>点击复选框标记测试状态：⬜ 未测试 → ✅ 通过 → ❌ 失败 → ⚠️ 待定</li>
+                <li>每个测试包含详细步骤和预期结果</li>
+                <li>请按顺序完成测试，某些测试依赖前置条件</li>
+                <li>记录测试时间和问题，便于追踪和改进</li>
+            </ul>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-number" id="total-tests">0</div>
+            <div>总测试项</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-number" id="passed-tests">0</div>
+            <div>已通过</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-number" id="failed-tests">0</div>
+            <div>失败</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-number" id="pending-tests">0</div>
+            <div>待定</div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress">0%</div>
+        </div>
+
+        <h2>一、环境准备测试</h2>
+        
+        <div class="test-section">
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>1.1 环境变量配置</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>检查 .env 文件是否存在</li>
+                        <li>确认以下环境变量已设置：</li>
+                    </ol>
+                    <div class="command">
+cat .env | grep -E "GITHUB_|SECRET_KEY"
+                    </div>
+                    <div class="expected-result">
+                        ✅ 期望结果：
+                        <ul>
+                            <li>GITHUB_CLIENT_ID 已设置</li>
+                            <li>GITHUB_CLIENT_SECRET 已设置</li>
+                            <li>GITHUB_WEBHOOK_SECRET 已设置</li>
+                            <li>SECRET_KEY 已设置</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>1.2 数据库迁移</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>运行数据库迁移脚本</li>
+                        <li>检查数据库表结构</li>
+                    </ol>
+                    <div class="command">
+cd backend
+python migrations/apply_github_architecture.py
+                    </div>
+                    <div class="expected-result">
+                        ✅ 期望结果：成功创建 repositories、branches、issues、pull_requests 等表
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>二、OAuth 认证测试</h2>
+
+        <div class="test-section">
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>2.1 GitHub OAuth 应用配置</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>访问 GitHub Settings → Developer settings → OAuth Apps</li>
+                        <li>确认应用已创建并配置正确</li>
+                        <li>检查回调 URL 是否匹配：<code>http://localhost:5000/auth/github/callback</code></li>
+                    </ol>
+                    <div class="expected-result">
+                        ✅ 期望结果：OAuth 应用配置正确，Client ID 和 Secret 与本地配置匹配
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>2.2 登录流程测试</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>启动应用：<code>cd backend && python app.py</code></li>
+                        <li>访问 <code>http://localhost:5173</code></li>
+                        <li>点击"使用 GitHub 登录"</li>
+                        <li>授权应用访问</li>
+                    </ol>
+                    <div class="expected-result">
+                        ✅ 期望结果：
+                        <ul>
+                            <li>成功跳转到 GitHub 授权页面</li>
+                            <li>授权后返回应用</li>
+                            <li>显示用户信息</li>
+                            <li>Session 创建成功</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>2.3 用户信息获取</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <div class="command">
+curl http://localhost:5000/api/user/profile -H "Cookie: session=..."
+                    </div>
+                    <div class="expected-result">
+                        ✅ 期望结果：返回当前登录用户的 GitHub 信息
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>三、仓库管理功能测试</h2>
+
+        <div class="test-section">
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>3.1 导入 GitHub 仓库</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-data">
+                    测试数据：
+                    <ul>
+                        <li>公开仓库：https://github.com/octocat/Hello-World</li>
+                        <li>私有仓库：使用您自己的私有仓库 URL</li>
+                    </ul>
+                </div>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>调用导入 API</li>
+                        <li>检查返回的仓库信息</li>
+                        <li>验证本地克隆</li>
+                    </ol>
+                    <div class="command">
+curl -X POST http://localhost:5000/api/github/import \
+  -H "Content-Type: application/json" \
+  -H "Cookie: session=..." \
+  -d '{
+    "github_url": "https://github.com/octocat/Hello-World",
+    "clone": true
+  }'
+                    </div>
+                    <div class="expected-result">
+                        ✅ 期望结果：
+                        <ul>
+                            <li>成功返回仓库信息（名称、描述、语言等）</li>
+                            <li>本地目录创建成功</li>
+                            <li>代码克隆完成</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>3.2 列出仓库</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <div class="command">
+curl http://localhost:5000/api/repos -H "Cookie: session=..."
+                    </div>
+                    <div class="expected-result">
+                        ✅ 期望结果：返回用户的所有仓库列表，包含统计信息
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>3.3 创建本地仓库</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>创建新仓库</li>
+                        <li>验证数据库记录</li>
+                    </ol>
+                    <div class="command">
+curl -X POST http://localhost:5000/api/repos \
+  -H "Content-Type: application/json" \
+  -H "Cookie: session=..." \
+  -d '{
+    "name": "test-project",
+    "description": "测试项目",
+    "organization": "my-team",
+    "is_private": true
+  }'
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>四、分支和任务管理测试</h2>
+
+        <div class="test-section">
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>4.1 创建分支（任务）</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>为仓库创建新分支</li>
+                        <li>验证 Git 分支创建</li>
+                    </ol>
+                    <div class="command">
+curl -X POST http://localhost:5000/api/repos/{repo_id}/branches \
+  -H "Content-Type: application/json" \
+  -H "Cookie: session=..." \
+  -d '{
+    "name": "feature/test-feature",
+    "description": "测试功能分支",
+    "base_branch": "main"
+  }'
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>4.2 AI 辅助开发</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>执行分支任务</li>
+                        <li>等待 AI 生成代码</li>
+                        <li>检查生成结果</li>
+                    </ol>
+                    <div class="command">
+curl -X POST http://localhost:5000/api/branches/{branch_id}/execute \
+  -H "Cookie: session=..."
+                    </div>
+                    <div class="warning">
+                        ⚠️ 注意：需要配置 AI 执行器（Claude API）
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>4.3 统一工作流测试</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>使用统一 API 创建并执行任务</li>
+                        <li>验证自动创建分支</li>
+                        <li>验证自动提交</li>
+                    </ol>
+                    <div class="command">
+curl -X POST http://localhost:5000/api/unified/create-and-execute \
+  -H "Content-Type: application/json" \
+  -H "Cookie: session=..." \
+  -d '{
+    "repo_id": "repo_123",
+    "task": {
+        "title": "添加 README 文件",
+        "prompt": "创建一个简单的 README.md 文件",
+        "auto_commit": true,
+        "auto_pr": false
+    }
+  }'
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>五、Issue 管理测试</h2>
+
+        <div class="test-section">
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>5.1 创建 Issue</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <div class="command">
+curl -X POST http://localhost:5000/api/repos/{repo_id}/issues \
+  -H "Content-Type: application/json" \
+  -H "Cookie: session=..." \
+  -d '{
+    "title": "测试议题",
+    "description": "这是一个测试议题",
+    "priority": "medium",
+    "labels": [{"label": "test", "color": "#0366d6"}]
+  }'
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>5.2 列出和过滤 Issues</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>获取所有议题</li>
+                        <li>按状态过滤</li>
+                        <li>按优先级过滤</li>
+                    </ol>
+                    <div class="command">
+# 获取所有开放的议题
+curl "http://localhost:5000/api/repos/{repo_id}/issues?status=open" \
+  -H "Cookie: session=..."
+
+# 获取高优先级议题
+curl "http://localhost:5000/api/repos/{repo_id}/issues?priority=high" \
+  -H "Cookie: session=..."
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>5.3 更新和关闭 Issue</strong>
+                <span class="priority priority-low">可选</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>更新议题状态</li>
+                        <li>添加标签</li>
+                        <li>关闭议题</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <h2>六、Pull Request 测试</h2>
+
+        <div class="test-section">
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>6.1 创建 Pull Request</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>确保有一个功能分支</li>
+                        <li>创建 PR</li>
+                    </ol>
+                    <div class="command">
+curl -X POST http://localhost:5000/api/repos/{repo_id}/pulls \
+  -H "Content-Type: application/json" \
+  -H "Cookie: session=..." \
+  -d '{
+    "title": "测试 PR",
+    "body": "这是一个测试 Pull Request",
+    "head": "feature/test-feature",
+    "base": "main"
+  }'
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>6.2 代码审查</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>添加审查评论</li>
+                        <li>批准 PR</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>6.3 合并 PR</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>选择合并策略</li>
+                        <li>执行合并</li>
+                        <li>验证分支删除（如果选择）</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <h2>七、Webhook 集成测试</h2>
+
+        <div class="test-section">
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>7.1 配置 Webhook</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>使用 ngrok 暴露本地端口：<code>ngrok http 5000</code></li>
+                        <li>在 GitHub 仓库设置中添加 Webhook</li>
+                        <li>配置 URL：<code>https://xxx.ngrok.io/api/webhooks/github</code></li>
+                        <li>设置 Secret</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>7.2 Ping 测试</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>在 GitHub Webhook 设置页面点击"Send ping"</li>
+                        <li>检查应用日志</li>
+                    </ol>
+                    <div class="expected-result">
+                        ✅ 期望结果：收到 ping 事件，返回 200 OK
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>7.3 Push 事件测试</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>向仓库推送代码</li>
+                        <li>检查 Webhook 接收</li>
+                        <li>验证事件处理</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>7.4 查看 Webhook 历史</strong>
+                <span class="priority priority-low">可选</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <div class="command">
+curl http://localhost:5000/api/webhooks/github/events \
+  -H "Cookie: session=..."
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>八、集成测试</h2>
+
+        <div class="test-section">
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>8.1 端到端工作流</strong>
+                <span class="priority priority-high">必需</span>
+                <div class="test-steps">
+                    <p>完整工作流测试：</p>
+                    <ol>
+                        <li>导入 GitHub 仓库</li>
+                        <li>创建功能分支</li>
+                        <li>AI 生成代码</li>
+                        <li>创建 PR</li>
+                        <li>审查并合并</li>
+                        <li>验证 Webhook 通知</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>8.2 错误处理测试</strong>
+                <span class="priority priority-medium">重要</span>
+                <div class="test-steps">
+                    <p>测试各种错误场景：</p>
+                    <ol>
+                        <li>无效的 GitHub URL</li>
+                        <li>无权限访问的仓库</li>
+                        <li>网络超时处理</li>
+                        <li>Token 过期处理</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="test-item">
+                <span class="test-status" onclick="toggleStatus(this)"></span>
+                <strong>8.3 性能测试</strong>
+                <span class="priority priority-low">可选</span>
+                <div class="test-steps">
+                    <p>验证步骤：</p>
+                    <ol>
+                        <li>大仓库克隆性能</li>
+                        <li>并发请求处理</li>
+                        <li>Webhook 响应时间</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <h2>九、测试报告</h2>
+
+        <div class="test-section">
+            <h3>测试环境信息</h3>
+            <table>
+                <tr>
+                    <th>项目</th>
+                    <th>信息</th>
+                    <th>备注</th>
+                </tr>
+                <tr>
+                    <td>测试日期</td>
+                    <td><input type="date" id="test-date" class="no-print"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>测试人员</td>
+                    <td><input type="text" id="tester" placeholder="输入测试人员姓名" class="no-print"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Python 版本</td>
+                    <td><input type="text" id="python-version" placeholder="例如: 3.9.0" class="no-print"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>操作系统</td>
+                    <td><input type="text" id="os-info" placeholder="例如: macOS 12.0" class="no-print"></td>
+                    <td></td>
+                </tr>
+            </table>
+
+            <h3>发现的问题</h3>
+            <textarea id="issues-found" rows="5" style="width: 100%; margin: 10px 0;" placeholder="记录测试过程中发现的问题..." class="no-print"></textarea>
+
+            <h3>改进建议</h3>
+            <textarea id="suggestions" rows="5" style="width: 100%; margin: 10px 0;" placeholder="对系统的改进建议..." class="no-print"></textarea>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="exportReport()" style="background-color: #0366d6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px;" class="no-print">📄 导出测试报告</button>
+            <button onclick="window.print()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px;" class="no-print">🖨️ 打印测试清单</button>
+            <button onclick="resetTests()" style="background-color: #d73a49; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px;" class="no-print">🔄 重置所有测试</button>
+        </div>
+    </div>
+
+    <script>
+        // 测试状态管理
+        const statusCycle = ['', 'passed', 'failed', 'pending'];
+        
+        function toggleStatus(element) {
+            const currentClass = element.className.replace('test-status ', '');
+            const currentIndex = statusCycle.indexOf(currentClass);
+            const nextIndex = (currentIndex + 1) % statusCycle.length;
+            element.className = 'test-status ' + statusCycle[nextIndex];
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const allTests = document.querySelectorAll('.test-status');
+            const total = allTests.length;
+            const passed = document.querySelectorAll('.test-status.passed').length;
+            const failed = document.querySelectorAll('.test-status.failed').length;
+            const pending = document.querySelectorAll('.test-status.pending').length;
+            const completed = passed + failed + pending;
+            
+            document.getElementById('total-tests').textContent = total;
+            document.getElementById('passed-tests').textContent = passed;
+            document.getElementById('failed-tests').textContent = failed;
+            document.getElementById('pending-tests').textContent = pending;
+            
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            const progressBar = document.getElementById('progress');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+            
+            // 保存状态到 localStorage
+            saveTestState();
+        }
+
+        function saveTestState() {
+            const testStates = [];
+            document.querySelectorAll('.test-status').forEach((element, index) => {
+                const status = element.className.replace('test-status ', '');
+                testStates.push(status);
+            });
+            localStorage.setItem('githubTestStates', JSON.stringify(testStates));
+            localStorage.setItem('testDate', document.getElementById('test-date').value);
+            localStorage.setItem('tester', document.getElementById('tester').value);
+            localStorage.setItem('pythonVersion', document.getElementById('python-version').value);
+            localStorage.setItem('osInfo', document.getElementById('os-info').value);
+            localStorage.setItem('issuesFound', document.getElementById('issues-found').value);
+            localStorage.setItem('suggestions', document.getElementById('suggestions').value);
+        }
+
+        function loadTestState() {
+            const savedStates = localStorage.getItem('githubTestStates');
+            if (savedStates) {
+                const states = JSON.parse(savedStates);
+                document.querySelectorAll('.test-status').forEach((element, index) => {
+                    if (states[index]) {
+                        element.className = 'test-status ' + states[index];
+                    }
+                });
+            }
+            
+            // 恢复其他数据
+            document.getElementById('test-date').value = localStorage.getItem('testDate') || '';
+            document.getElementById('tester').value = localStorage.getItem('tester') || '';
+            document.getElementById('python-version').value = localStorage.getItem('pythonVersion') || '';
+            document.getElementById('os-info').value = localStorage.getItem('osInfo') || '';
+            document.getElementById('issues-found').value = localStorage.getItem('issuesFound') || '';
+            document.getElementById('suggestions').value = localStorage.getItem('suggestions') || '';
+            
+            updateProgress();
+        }
+
+        function resetTests() {
+            if (confirm('确定要重置所有测试状态吗？')) {
+                document.querySelectorAll('.test-status').forEach(element => {
+                    element.className = 'test-status';
+                });
+                localStorage.removeItem('githubTestStates');
+                updateProgress();
+            }
+        }
+
+        function exportReport() {
+            const report = {
+                testDate: document.getElementById('test-date').value,
+                tester: document.getElementById('tester').value,
+                environment: {
+                    python: document.getElementById('python-version').value,
+                    os: document.getElementById('os-info').value
+                },
+                summary: {
+                    total: document.getElementById('total-tests').textContent,
+                    passed: document.getElementById('passed-tests').textContent,
+                    failed: document.getElementById('failed-tests').textContent,
+                    pending: document.getElementById('pending-tests').textContent
+                },
+                issues: document.getElementById('issues-found').value,
+                suggestions: document.getElementById('suggestions').value,
+                timestamp: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(report, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `github-test-report-${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        // 监听输入变化
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('change', saveTestState);
+        });
+
+        // 页面加载时恢复状态
+        window.onload = function() {
+            loadTestState();
+            // 设置默认日期为今天
+            if (!document.getElementById('test-date').value) {
+                document.getElementById('test-date').value = new Date().toISOString().split('T')[0];
+            }
+        };
+    </script>
+</body>
+</html>
