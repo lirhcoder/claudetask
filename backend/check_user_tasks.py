@@ -34,6 +34,17 @@ def main():
     conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
     
+    # 统计任务的user_id情况
+    cursor.execute("SELECT COUNT(*) FROM tasks WHERE user_id IS NULL OR user_id = ''")
+    no_user_count = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(DISTINCT user_id) FROM tasks WHERE user_id IS NOT NULL AND user_id != ''")
+    unique_users = cursor.fetchone()[0]
+    
+    print(f"\n任务统计:")
+    print(f"  - 没有user_id的任务: {no_user_count}")
+    print(f"  - 唯一的user_id数: {unique_users}")
+    
     # 查询所有任务
     cursor.execute("SELECT id, user_id, project_path, created_at FROM tasks ORDER BY created_at DESC LIMIT 20")
     all_tasks = cursor.fetchall()

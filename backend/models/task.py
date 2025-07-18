@@ -90,12 +90,16 @@ class TaskDB:
             cursor = conn.cursor()
             
             # 准备元数据
+            started_at = getattr(task, 'started_at', None)
+            if started_at and hasattr(started_at, 'isoformat'):
+                started_at = started_at.isoformat()
+            
             metadata = json.dumps({
                 'files_changed': getattr(task, 'files_changed', []),
                 'execution_time': getattr(task, 'execution_time', None),
                 'exit_code': getattr(task, 'exit_code', None),
                 'error': getattr(task, 'error', None),
-                'started_at': getattr(task, 'started_at', None)
+                'started_at': started_at
             })
             
             # 检查表结构是否包含新字段

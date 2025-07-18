@@ -21,16 +21,47 @@ class TaskChainExecutor:
         self.task_manager = task_manager
         
     def create_task_chain(self, parent_prompt: str, child_prompts: List[str], 
-                         project_path: str) -> Task:
+                         project_path: str, user_id: Optional[str] = None) -> Task:
         """创建任务链"""
         import uuid
+        
+        # 如果没有 user_id，尝试从项目路径推断并创建用户
+        if not user_id:
+            from utils.user_inference import infer_user_from_project_path, construct_email
+            from models.user import UserManager
+            
+            user_info = infer_user_from_project_path(project_path)
+            if user_info:
+                username, domain = user_info
+                inferred_email = construct_email(username, domain)
+                
+                # 检查用户是否存在，不存在则创建
+                user_manager = UserManager()
+                user = user_manager.get_user_by_email(inferred_email)
+                
+                if not user:
+                    logger.info(f"Creating new user from task chain: {inferred_email}")
+                    # 创建新用户，密码为用户名+默认后缀
+                    password = username.split('@')[0] + '123456'
+                    user = user_manager.create_user(
+                        email=inferred_email,
+                        password=password,
+                        username=username.split('@')[0]
+                    )
+                    if user:
+                        user_id = user.id
+                        logger.info(f"Created user {inferred_email} with ID {user_id}")
+                else:
+                    user_id = user.id
+                    logger.info(f"Found existing user {inferred_email} with ID {user_id}")
         
         # 创建父任务
         parent_id = str(uuid.uuid4())
         parent_task = Task(
             id=parent_id,
             prompt=parent_prompt,
-            project_path=project_path
+            project_path=project_path,
+            user_id=user_id
         )
         parent_task.task_type = 'parent'
         
@@ -41,7 +72,8 @@ class TaskChainExecutor:
                 id=child_id,
                 prompt=child_prompt,
                 project_path=project_path,
-                parent_task_id=parent_id
+                parent_task_id=parent_id,
+                user_id=user_id
             )
             child_task.task_type = 'child'
             child_task.sequence_order = i + 1

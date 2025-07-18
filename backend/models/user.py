@@ -330,3 +330,29 @@ class UserManager:
         ''', (user_id,))
         conn.commit()
         conn.close()
+    
+    def get_or_create_user_from_email_hint(self, email_hint: str, user_id: Optional[str] = None) -> Optional[User]:
+        """根据邮箱提示获取或创建用户"""
+        # 如果是完整邮箱，直接查找
+        if '@' in email_hint:
+            user = self.get_user_by_email(email_hint)
+            if user:
+                return user
+            
+            # 创建新用户
+            import uuid
+            new_user_id = user_id or str(uuid.uuid4())
+            return self.create_user(
+                email=email_hint,
+                password=email_hint.split('@')[0] + '123456',  # 默认密码
+                username=email_hint.split('@')[0]
+            )
+        
+        # 如果只是用户名部分，尝试匹配
+        users = self.list_users()
+        for user in users:
+            if user.email.startswith(email_hint + '@'):
+                return user
+        
+        # 无法匹配，返回None
+        return None

@@ -386,9 +386,20 @@ def list_tasks():
                         logging.warning(f"User not found for task {task_dict.get('id')[:8]}, user_id: {task_user_id}")
                         task_dict['user_email'] = 'unknown@example.com'
                 else:
-                    # 调试：记录没有user_id的任务
-                    logging.info(f"Task {task_dict.get('id')[:8]} has no user_id")
-                    task_dict['user_email'] = 'unknown@example.com'
+                    # 尝试从项目路径推断用户
+                    from utils.user_inference import infer_user_from_project_path, construct_email
+                    user_info = infer_user_from_project_path(task_dict.get('project_path', ''))
+                    
+                    if user_info:
+                        username, domain = user_info
+                        inferred_email = construct_email(username, domain)
+                        logging.info(f"Task {task_dict.get('id')[:8]} - inferred user: {inferred_email} from path")
+                        task_dict['user_email'] = inferred_email
+                        task_dict['user_inferred'] = True  # 标记为推断的用户
+                    else:
+                        # 调试：记录没有user_id的任务
+                        logging.info(f"Task {task_dict.get('id')[:8]} has no user_id and cannot infer from path")
+                        task_dict['user_email'] = 'unknown@example.com'
                 
                 task_list.append(task_dict)
             except Exception as e:
@@ -606,7 +617,8 @@ def create_task_chain():
         parent_task = chain_executor.create_task_chain(
             parent_prompt=parent_prompt,
             child_prompts=child_prompts,
-            project_path=project_path
+            project_path=project_path,
+            user_id=session.get('user_id')
         )
         
         # Execute the chain
@@ -867,6 +879,35 @@ def execute_local():
         return jsonify({'error': error_msg}), 400
     
     try:
+        # Get or create user
+        user_id = session.get('user_id')
+        if not user_id:
+            from utils.user_inference import infer_user_from_project_path, construct_email
+            from models.user import UserManager
+            
+            user_info = infer_user_from_project_path(project_path)
+            if user_info:
+                username, domain = user_info
+                inferred_email = construct_email(username, domain)
+                
+                # 检查用户是否存在，不存在则创建
+                user_manager = UserManager()
+                user = user_manager.get_user_by_email(inferred_email)
+                
+                if not user:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.info(f"Creating new user from local task: {inferred_email}")
+                    # 创建新用户，密码为用户名+默认后缀
+                    password = username.split('@')[0] + '123456'
+                    user = user_manager.create_user(
+                        email=inferred_email,
+                        password=password,
+                        username=username.split('@')[0]
+                    )
+                    if user:
+                        user_id = user.id
+        
         # Create task record
         import uuid
         task_id = str(uuid.uuid4())
@@ -874,7 +915,7 @@ def execute_local():
             id=task_id,
             prompt=prompt,
             project_path=project_path,
-            user_id=session.get('user_id')
+            user_id=user_id
         )
         
         # Initialize additional fields
@@ -967,8 +1008,17 @@ def admin_list_all_tasks():
                 else:
                     task['user_email'] = 'unknown@example.com'
             else:
-                # 如果没有 user_id，分配给管理员
-                task['user_email'] = 'admin@claudetask.local'
+                # 尝试从项目路径推断用户
+                from utils.user_inference import infer_user_from_project_path, construct_email
+                user_info = infer_user_from_project_path(task.get('project_path', ''))
+                
+                if user_info:
+                    username, domain = user_info
+                    task['user_email'] = construct_email(username, domain)
+                    task['user_inferred'] = True
+                else:
+                    # 如果没有 user_id，分配给管理员
+                    task['user_email'] = 'admin@claudetask.local'
         
         return jsonify({'tasks': tasks}), 200
     except Exception as e:
