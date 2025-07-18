@@ -14,6 +14,8 @@ import {
   LogoutOutlined,
   CrownOutlined,
   FolderOutlined,
+  FolderOpenOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -63,6 +65,11 @@ const MainLayout = () => {
       key: '/projects',
       icon: <FolderOutlined />,
       label: 'Projects',
+    },
+    {
+      key: '/workspace',
+      icon: <FolderOpenOutlined />,
+      label: '任务工作台',
     },
     {
       key: '/tasks',

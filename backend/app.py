@@ -27,10 +27,12 @@ def create_app(config_name=None):
     # Register blueprints
     from routes.api import api_bp
     from routes.auth import auth_bp
+    from routes.task_filesystem_api import task_fs_bp
     from routes.websocket import register_socketio_handlers
     
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(task_fs_bp, url_prefix='/api/taskfs')
     register_socketio_handlers(socketio)
     
     # Create upload directory

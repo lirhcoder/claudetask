@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import ProjectPage from './pages/ProjectPage'
 import ProjectsPage from './pages/ProjectsPage'
 import TasksPage from './pages/TasksPage'
+import TaskWorkspace from './pages/TaskWorkspace'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
@@ -32,6 +33,7 @@ function App() {
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="project/:projectName" element={<ProjectPage />} />
               <Route path="tasks" element={<TasksPage />} />
+              <Route path="workspace/*" element={<TaskWorkspace />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminPage />} />
             </Route>

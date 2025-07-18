@@ -83,6 +83,26 @@ export const taskApi = {
   getAgentMetrics: () => apiClient.get('/metrics/agent'),
 }
 
+export const taskFileSystemApi = {
+  // 任务文件系统API
+  getTaskTree: (path = '/', maxDepth = -1) => 
+    apiClient.get('/taskfs/tree', { params: { path, max_depth: maxDepth } }),
+  listDirectory: (path = '/') => 
+    apiClient.get('/taskfs/list', { params: { path } }),
+  getTask: (path) => 
+    apiClient.get('/taskfs/task', { params: { path } }),
+  createTask: (data) => 
+    apiClient.post('/taskfs/create', data),
+  moveTask: (sourcePath, destParentPath, newName) => 
+    apiClient.post('/taskfs/move', { source_path: sourcePath, dest_parent_path: destParentPath, new_name: newName }),
+  deleteTask: (path, recursive = false) => 
+    apiClient.delete('/taskfs/delete', { params: { path, recursive } }),
+  executeTask: (path) => 
+    apiClient.post('/taskfs/execute', { path }),
+  searchTasks: (query, path = '/') => 
+    apiClient.get('/taskfs/search', { params: { q: query, path } }),
+}
+
 export const authApi = {
   // 认证相关
   login: (data) => apiClient.post('/auth/login', data),
