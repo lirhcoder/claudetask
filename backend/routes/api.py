@@ -376,13 +376,18 @@ def list_tasks():
                         logging.debug(f"Task {task_dict.get('id')} has no user_id, showing to current user")
                 
                 # 添加用户邮箱信息
-                if task_dict.get('user_id'):
-                    user = user_manager.get_user_by_id(task_dict['user_id'])
+                task_user_id = task_dict.get('user_id')
+                if task_user_id:
+                    user = user_manager.get_user_by_id(task_user_id)
                     if user:
                         task_dict['user_email'] = user.email
                     else:
+                        # 调试：记录找不到用户的情况
+                        logging.warning(f"User not found for task {task_dict.get('id')[:8]}, user_id: {task_user_id}")
                         task_dict['user_email'] = 'unknown@example.com'
                 else:
+                    # 调试：记录没有user_id的任务
+                    logging.info(f"Task {task_dict.get('id')[:8]} has no user_id")
                     task_dict['user_email'] = 'unknown@example.com'
                 
                 task_list.append(task_dict)
