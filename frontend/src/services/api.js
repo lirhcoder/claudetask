@@ -39,6 +39,29 @@ apiClient.interceptors.response.use(
   }
 )
 
+// 统一 API V2 - 简化接口
+export const unifiedApi = {
+  // 快速创建并执行任务
+  quickTask: (repoId, taskData) => 
+    apiClient.post(`/v2/repos/${repoId}/quick-task`, taskData),
+  
+  // 获取仓库的所有分支（包含任务信息）
+  listBranches: (repoId) => 
+    apiClient.get(`/v2/repos/${repoId}/branches`),
+  
+  // 获取简化的仪表板数据
+  getDashboard: () => 
+    apiClient.get('/v2/dashboard'),
+  
+  // 获取迁移状态
+  getMigrationStatus: () => 
+    apiClient.get('/v2/migrate/status'),
+  
+  // 获取简化的设置
+  getSimplifiedSettings: () => 
+    apiClient.post('/v2/settings/simplify')
+}
+
 export const projectApi = {
   listProjects: (filter = 'all') => apiClient.get('/projects', { params: { filter } }),
   listAllProjects: () => apiClient.get('/admin/projects'),  // 管理员接口

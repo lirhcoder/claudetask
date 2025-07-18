@@ -60,32 +60,17 @@ const MainLayout = () => {
     {
       key: '/',
       icon: <DashboardOutlined />,
-      label: 'Dashboard',
+      label: '工作台',
     },
     {
       key: '/repositories',
       icon: <GithubOutlined />,
-      label: '仓库管理',
-    },
-    {
-      key: '/projects',
-      icon: <FolderOutlined />,
-      label: 'Projects',
-    },
-    {
-      key: '/workspace',
-      icon: <FolderOpenOutlined />,
-      label: '任务工作台',
-    },
-    {
-      key: '/tasks',
-      icon: <HistoryOutlined />,
-      label: 'Tasks',
+      label: '仓库',
     },
     {
       key: '/settings',
       icon: <SettingOutlined />,
-      label: 'Settings',
+      label: '设置',
     },
     currentUser?.is_admin && {
       key: '/admin',

@@ -33,6 +33,13 @@ def create_app(config_name=None):
     from routes.config_api import config_bp
     from routes.websocket import register_socketio_handlers
     
+    # 注册统一 API V2
+    try:
+        from routes.unified_api import unified_bp
+        app.register_blueprint(unified_bp)
+    except ImportError:
+        print("Warning: Unified API not found, skipping...")
+    
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(task_fs_bp, url_prefix='/api/taskfs')
@@ -40,6 +47,14 @@ def create_app(config_name=None):
     app.register_blueprint(webhook_bp, url_prefix='/api/webhooks')
     app.register_blueprint(config_bp, url_prefix='/api')
     register_socketio_handlers(socketio)
+    
+    # 初始化兼容性支持
+    if os.path.exists('migration_config.json'):
+        try:
+            from compatibility import init_compatibility
+            init_compatibility(app)
+        except ImportError:
+            pass
     
     # Create upload directory
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
