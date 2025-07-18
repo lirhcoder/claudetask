@@ -3,7 +3,6 @@ import { Card, Table, Button, Modal, Form, Input, message, Space, Tooltip, Typog
 import { FolderOutlined, PlusOutlined, DeleteOutlined, EditOutlined, EyeOutlined, ReloadOutlined, FolderOpenOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { projectApi } from '../services/api'
-import PageLayout from '../components/PageLayout'
 
 const { Title, Text } = Typography
 const { confirm } = Modal
@@ -133,7 +132,7 @@ const ProjectsPage = () => {
   ]
 
   return (
-    <PageLayout>
+    <div style={{ padding: '24px' }}>
       <Card
         title={
           <Space>
@@ -235,7 +234,7 @@ const ProjectsPage = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </PageLayout>
+    </div>
   )
 }
 
