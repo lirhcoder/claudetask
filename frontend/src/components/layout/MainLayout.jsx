@@ -91,7 +91,21 @@ const MainLayout = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed}>
+      <Sider 
+        trigger={null} 
+        collapsible 
+        collapsed={collapsed}
+        width={200}
+        collapsedWidth={80}
+        style={{
+          overflow: 'auto',
+          height: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+        }}
+      >
         <div
           style={{
             height: 32,
@@ -102,6 +116,8 @@ const MainLayout = () => {
             color: '#fff',
             fontSize: collapsed ? 16 : 20,
             fontWeight: 'bold',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
           }}
         >
           {collapsed ? 'CC' : 'Claude Code'}
@@ -114,7 +130,13 @@ const MainLayout = () => {
           onClick={handleMenuClick}
         />
       </Sider>
-      <Layout style={{ background: isDarkMode ? '#001529' : '#f0f2f5' }}>
+      <Layout 
+        style={{ 
+          marginLeft: collapsed ? 80 : 200,
+          transition: 'margin-left 0.2s',
+          background: isDarkMode ? '#001529' : '#f0f2f5' 
+        }}
+      >
         <Header
           style={{
             padding: '0 16px',
@@ -123,6 +145,10 @@ const MainLayout = () => {
             alignItems: 'center',
             justifyContent: 'space-between',
             boxShadow: '0 1px 4px rgba(0,21,41,.08)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            width: '100%',
           }}
         >
           <Button
@@ -180,17 +206,24 @@ const MainLayout = () => {
         </Header>
         <Content
           style={{
-            margin: '16px auto',
-            padding: 16,
+            margin: '16px',
             minHeight: 'calc(100vh - 96px)',
-            maxWidth: 1400,
-            width: '100%',
-            background: isDarkMode ? '#141414' : '#fff',
-            borderRadius: 8,
+            display: 'flex',
+            justifyContent: 'center',
             overflow: 'auto',
           }}
         >
-          <Outlet />
+          <div
+            style={{
+              padding: 16,
+              width: '100%',
+              maxWidth: 1400,
+              background: isDarkMode ? '#141414' : '#fff',
+              borderRadius: 8,
+            }}
+          >
+            <Outlet />
+          </div>
         </Content>
       </Layout>
     </Layout>

@@ -42,3 +42,25 @@ code {
 .ant-table-small .ant-table-tbody > tr > td {
   padding: 8px;
 }
+
+/* Ensure smooth transitions for layout changes */
+.ant-layout {
+  transition: all 0.2s;
+}
+
+/* Prevent horizontal scroll on main layout */
+.ant-layout-content {
+  overflow-x: hidden;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: absolute !important;
+    z-index: 10;
+  }
+  
+  .ant-layout-sider-collapsed {
+    position: fixed !important;
+  }
+}
