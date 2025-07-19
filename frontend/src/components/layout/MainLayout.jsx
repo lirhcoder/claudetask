@@ -114,7 +114,7 @@ const MainLayout = () => {
           onClick={handleMenuClick}
         />
       </Sider>
-      <Layout>
+      <Layout style={{ background: isDarkMode ? '#001529' : '#f0f2f5' }}>
         <Header
           style={{
             padding: '0 16px',
@@ -122,6 +122,7 @@ const MainLayout = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            boxShadow: '0 1px 4px rgba(0,21,41,.08)',
           }}
         >
           <Button
@@ -179,9 +180,11 @@ const MainLayout = () => {
         </Header>
         <Content
           style={{
-            margin: '16px',
+            margin: '16px auto',
             padding: 16,
             minHeight: 'calc(100vh - 96px)',
+            maxWidth: 1400,
+            width: '100%',
             background: isDarkMode ? '#141414' : '#fff',
             borderRadius: 8,
             overflow: 'auto',

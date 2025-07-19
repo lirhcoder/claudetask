@@ -231,7 +231,7 @@ const AgentIndexPage = () => {
 
         {/* 个人指标卡片 */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col span={6}>
+          <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="本月工作时长"
@@ -241,7 +241,7 @@ const AgentIndexPage = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="本月完成任务"
@@ -251,7 +251,7 @@ const AgentIndexPage = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="月度员工指数"
@@ -266,7 +266,7 @@ const AgentIndexPage = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="月度排名"

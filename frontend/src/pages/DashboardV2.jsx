@@ -83,7 +83,7 @@ const DashboardV2 = () => {
 
         {/* 统计卡片 */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={8}>
             <Card hoverable onClick={() => navigate('/repositories')}>
               <Statistic
                 title="仓库总数"
@@ -92,7 +92,7 @@ const DashboardV2 = () => {
               />
             </Card>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={8}>
             <Card>
               <Statistic
                 title="进行中任务"
@@ -102,7 +102,7 @@ const DashboardV2 = () => {
               />
             </Card>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={8}>
             <Card>
               <Statistic
                 title="今日完成"
@@ -116,7 +116,7 @@ const DashboardV2 = () => {
 
         <Row gutter={[16, 16]}>
           {/* 快捷操作 */}
-          <Col span={8}>
+          <Col xs={24} md={8} lg={6}>
             <Card title="快捷操作" style={{ height: '100%' }}>
               <Space direction="vertical" style={{ width: '100%' }}>
                 {dashboardData.quick_actions.map(action => (
@@ -140,7 +140,7 @@ const DashboardV2 = () => {
           </Col>
 
           {/* 最近任务 */}
-          <Col span={16}>
+          <Col xs={24} md={16} lg={18}>
             <Card 
               title="最近任务" 
               extra={<a onClick={() => navigate('/repositories')}>查看全部</a>}

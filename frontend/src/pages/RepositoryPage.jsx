@@ -171,7 +171,7 @@ const RepositoryPage = () => {
 
         {/* 统计信息 */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col span={6}>
+          <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="总仓库数"
@@ -180,7 +180,7 @@ const RepositoryPage = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="总分支数"
@@ -189,7 +189,7 @@ const RepositoryPage = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="开放议题"
@@ -199,7 +199,7 @@ const RepositoryPage = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="已同步"
